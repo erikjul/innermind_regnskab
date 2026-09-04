@@ -35,6 +35,14 @@ Aflæsningen bruger Claude API'et (modellen `claude-opus-5` som standard, kan æ
 Programmet er sat op med serverside-fallback, så en aflæsning, som modellen afviser, automatisk
 prøves igen på en anden Claude-model.
 
+### Windows: genveje
+
+Efter installationen kan du bruge de tre bat-filer i mappen i stedet for kommandoerne:
+
+* `start.bat` – starter programmet og åbner browseren
+* `opdater.bat` – henter nyeste version fra GitHub
+* `backup.bat` – gemmer en sikkerhedskopi (kobl den til Opgavestyring, så den kører dagligt)
+
 Kør testene med:
 
 ```bash
