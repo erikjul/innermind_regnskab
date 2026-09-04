@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block titel %}Indstillinger{% endblock %}
+{% block indhold %}
+<h1>Indstillinger</h1>
+<form class="boks formular" method="post" action="/indstillinger">
+  <h2>Virksomhed</h2>
+  <div class="raekke">
+    <label>Firmanavn <input name="firmanavn" value="{{ indstillinger.firmanavn }}"></label>
+    <label>CVR-nr. <input name="cvr" value="{{ indstillinger.cvr }}"></label>
+  </div>
+  <div class="raekke">
+    <label>Adresse <input name="adresse" value="{{ indstillinger.adresse }}"></label>
+    <label>Postnr. <input name="postnr" value="{{ indstillinger.postnr }}"></label>
+    <label>By <input name="by" value="{{ indstillinger.by }}"></label>
+  </div>
+  <div class="raekke">
+    <label>E-mail <input name="email" value="{{ indstillinger.email }}"></label>
+    <label>Telefon <input name="telefon" value="{{ indstillinger.telefon }}"></label>
+  </div>
+  <h2>Moms</h2>
+  <div class="raekke">
+    <label><input type="checkbox" name="momsregistreret" {% if indstillinger.momsregistreret %}checked{% endif %}> Momsregistreret</label>
+    <label>Momsperiode <select name="momsperiode">
+      <option value="kvartal" {% if indstillinger.momsperiode == 'kvartal' %}selected{% endif %}>Kvartal (omsætning 5–50 mio.)</option>
+      <option value="halvaar" {% if indstillinger.momsperiode == 'halvaar' %}selected{% endif %}>Halvår (omsætning under 5 mio.)</option>
+      <option value="maaned" {% if indstillinger.momsperiode == 'maaned' %}selected{% endif %}>Måned</option>
+    </select></label>
+  </div>
+  <h2>Standardkonti</h2>
+  <div class="raekke">
+    {% for felt, tekst in [('standard_bankkonto','Bank'),('standard_kreditorkonto','Kreditorer'),('standard_debitorkonto','Debitorer')] %}
+    <label>{{ tekst }} <select name="{{ felt }}">{% for k in konti %}<option value="{{ k.nummer }}" {% if indstillinger[felt] == k.nummer %}selected{% endif %}>{{ k.nummer }} {{ k.navn }}</option>{% endfor %}</select></label>
+    {% endfor %}
+  </div>
+  <div class="raekke">
+    {% for felt, tekst in [('koebsmoms_konto','Købsmoms'),('salgsmoms_konto','Salgsmoms'),('udlandsmoms_konto','Moms af køb i udlandet'),('momsafregning_konto','Momsafregning')] %}
+    <label>{{ tekst }} <select name="{{ felt }}">{% for k in konti %}<option value="{{ k.nummer }}" {% if indstillinger[felt] == k.nummer %}selected{% endif %}>{{ k.nummer }} {{ k.navn }}</option>{% endfor %}</select></label>
+    {% endfor %}
+  </div>
+  <p><button class="primary">Gem</button></p>
+</form>
+<section class="boks">
+  <h2>Automatisk aflæsning</h2>
+  <p>Model: <code>{{ model }}</code>. API-nøgle: {% if api_ok %}<span class="ok">sat</span>{% else %}<span class="roed">ikke sat</span> – sæt miljøvariablen <code>ANTHROPIC_API_KEY</code> og genstart programmet.{% endif %}</p>
+</section>
+{% endblock %}

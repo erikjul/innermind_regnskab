@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block titel %}Kontoplan{% endblock %}
+{% block indhold %}
+<h1>Kontoplan</h1>
+<table>
+  <tr><th>Nr.</th><th>Navn</th><th>Type</th><th>Gruppe</th><th>Std. momskode</th><th>Standardkonto (ERST)</th><th class="beloeb">Saldo</th><th></th></tr>
+  {% for k in konti %}
+  <tr class="{% if not k.aktiv %}inaktiv{% endif %}">
+    <td><a href="/kontoplan/{{ k.nummer }}">{{ k.nummer }}</a></td><td>{{ k.navn }}</td><td>{{ k.type }}</td><td>{{ k.gruppe }}</td>
+    <td>{{ k.standard_momskode or '' }}</td><td>{{ k.standardkonto or '' }}</td>
+    <td class="beloeb">{{ saldi[k.nummer].saldo|kr if k.nummer in saldi else '' }}</td>
+    <td><form method="post" action="/kontoplan/{{ k.nummer }}/aktiv"><button class="lille">{% if k.aktiv %}Deaktivér{% else %}Aktivér{% endif %}</button></form></td>
+  </tr>
+  {% endfor %}
+</table>
+<form class="boks formular" method="post" action="/kontoplan">
+  <h2>Opret eller ret konto</h2>
+  <div class="raekke">
+    <label>Nummer <input name="nummer" type="number" required></label>
+    <label>Navn <input name="navn" required></label>
+    <label>Type <select name="type"><option value="indtaegt">Indtægt</option><option value="omkostning">Omkostning</option><option value="aktiv">Aktiv</option><option value="passiv">Passiv</option><option value="egenkapital">Egenkapital</option></select></label>
+  </div>
+  <div class="raekke">
+    <label>Gruppe <input name="gruppe"></label>
+    <label>Standard momskode <select name="standard_momskode"><option value=""></option>{% for m in momskoder %}<option value="{{ m.kode }}">{{ m.kode }}</option>{% endfor %}</select></label>
+    <label>Standardkonto (Erhvervsstyrelsen) <input name="standardkonto"></label>
+  </div>
+  <p><button>Gem konto</button></p>
+</form>
+{% endblock %}

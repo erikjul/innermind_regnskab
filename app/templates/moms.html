@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titel %}Momsregnskab{% endblock %}
+{% block indhold %}
+<h1>Momsregnskab</h1>
+<p class="filter">
+  <a href="/moms?aar={{ aar - 1 }}">← {{ aar - 1 }}</a>
+  {% for f, t, navn in perioder %}<a href="/moms?fra={{ f }}&til={{ t }}" {% if valgt[0] == f and valgt[1] == t %}class="aktiv"{% endif %}>{{ navn }}</a>{% endfor %}
+  <a href="/moms?aar={{ aar + 1 }}">{{ aar + 1 }} →</a>
+</p>
+<form class="filter" method="get">Frit interval: <input type="date" name="fra" value="{{ opg.fra }}"> – <input type="date" name="til" value="{{ opg.til }}"> <button>Vis</button></form>
+<div class="to-kolonner">
+  <section class="boks">
+    <h2>Momsangivelse {{ opg.fra|dato }} – {{ opg.til|dato }} {% if opg.afregnet %}<span class="status bogfoert">Afregnet {{ opg.afregnet.oprettet|dato }}</span>{% endif %}</h2>
+    <table class="noegletal">
+      {% for felt, tekst in felter %}<tr><td>{{ tekst }}</td><td class="beloeb">{{ opg.felter[felt]|kr }}</td></tr>{% endfor %}
+      <tr class="sum"><td>{% if opg.momstilsvar >= 0 %}Momstilsvar – moms at betale{% else %}Negativt momstilsvar – moms til gode{% endif %}</td><td class="beloeb">{{ opg.momstilsvar|kr }}</td></tr>
+    </table>
+    <h3>Rubrikker (værdi uden moms)</h3>
+    <table class="noegletal">
+      {% for r, tekst in rubrikker %}<tr><td>{{ tekst }}</td><td class="beloeb">{{ opg.rubrikker[r]|kr }}</td></tr>{% endfor %}
+    </table>
+    {% if not opg.afregnet %}
+    <form method="post" action="/moms/afregn" onsubmit="return confirm('Afregn og lås perioden? Der kan ikke bogføres i perioden bagefter.')">
+      <input type="hidden" name="fra" value="{{ opg.fra }}"><input type="hidden" name="til" value="{{ opg.til }}">
+      <p class="lille">Når du har indberettet tallene på skat.dk (TastSelv Erhverv), afregner du perioden her. Momskontiene nulstilles for perioden over på momsafregningskontoen, og perioden låses.</p>
+      <p><button class="primary">Markér som indberettet og lås perioden</button></p>
+    </form>
+    {% endif %}
+  </section>
+  <section class="boks">
+    <h2>Fordeling pr. momskode</h2>
+    <table>
+      <tr><th>Kode</th><th>Navn</th><th class="beloeb">Grundlag</th><th class="beloeb">Moms</th></tr>
+      {% for r in opg.pr_kode %}<tr><td>{{ r.kode.kode }}</td><td>{{ r.kode.navn }}</td><td class="beloeb">{{ r.grundlag|kr }}</td><td class="beloeb">{{ r.moms|kr }}</td></tr>
+      {% else %}<tr><td colspan="4">Ingen momsposteringer i perioden.</td></tr>{% endfor %}
+    </table>
+    <h3>Tidligere afregninger</h3>
+    <table>
+      <tr><th>Periode</th><th>Afregnet</th><th class="beloeb">Momstilsvar</th></tr>
+      {% for a in afregninger %}<tr><td><a href="/moms?fra={{ a.fra }}&til={{ a.til }}">{{ a.fra|dato }} – {{ a.til|dato }}</a></td><td>{{ a.oprettet|dato }}</td><td class="beloeb">{{ (a.felter_json|fromjson).momstilsvar|kr }}</td></tr>
+      {% else %}<tr><td colspan="3">Ingen.</td></tr>{% endfor %}
+    </table>
+  </section>
+</div>
+{% endblock %}

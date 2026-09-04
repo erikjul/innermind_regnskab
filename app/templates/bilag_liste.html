@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titel %}Bilag{% endblock %}
+{% block indhold %}
+<h1>Bilag</h1>
+<p class="filter">
+  <a href="/bilag" {% if not status %}class="aktiv"{% endif %}>Alle</a>
+  {% for k, t in STATUS_TEKST.items() %}<a href="/bilag?status={{ k }}" {% if status == k %}class="aktiv"{% endif %}>{{ t }}</a>{% endfor %}
+</p>
+<table>
+  <tr><th>Nr.</th><th>Uploadet</th><th>Bilagsdato</th><th>Modpart</th><th>Fakturanr.</th><th>Beskrivelse</th><th class="beloeb">Beløb inkl. moms</th><th>Konto</th><th>Status</th></tr>
+  {% for v in bilag %}
+  <tr>
+    <td><a href="/bilag/{{ v.id }}">{{ v.bilagsnr }}</a></td><td>{{ v.uploadet|dato }}</td><td>{{ v.dato|dato }}</td>
+    <td>{{ v.modpart or '' }}</td><td>{{ v.fakturanr or '' }}</td><td>{{ v.beskrivelse or v.original_filnavn }}</td>
+    <td class="beloeb">{{ v.beloeb_total|kr }}{% if v.valuta != 'DKK' %} {{ v.valuta }}{% endif %}</td><td>{{ v.konto or '' }}</td>
+    <td><span class="status {{ v.status }}">{{ STATUS_TEKST[v.status] }}</span>{% if v.postering %} <a href="/posteringer/{{ v.postering.id }}">nr. {{ v.postering.loebenr }}</a>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="9">Ingen bilag.</td></tr>{% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block titel %}Upload bilag{% endblock %}
+{% block indhold %}
+<h1>Upload bilag</h1>
+{% if not api_ok %}<div class="flash fejl">ANTHROPIC_API_KEY er ikke sat – bilag gemmes, men aflæses ikke automatisk. Se README.</div>{% endif %}
+<div class="to-kolonner">
+  <form class="boks" method="post" action="/bilag/upload" enctype="multipart/form-data">
+    <h2>Fra computer</h2>
+    <p>PDF, PNG, JPG, WEBP eller HEIC. Du kan vælge flere filer ad gangen.</p>
+    <input type="hidden" name="kilde" value="upload">
+    <input type="file" name="filer" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,image/*,application/pdf" multiple required>
+    <p><button class="primary">Upload og aflæs</button></p>
+  </form>
+  <form class="boks" method="post" action="/bilag/upload" enctype="multipart/form-data">
+    <h2>Tag et foto med kameraet</h2>
+    <p>Åbn siden på din telefon og tag et billede af kvitteringen eller fakturaen. Sørg for god belysning, og at hele bilaget er med.</p>
+    <input type="hidden" name="kilde" value="kamera">
+    <input type="file" name="filer" accept="image/*" capture="environment" required>
+    <p><button class="primary">Send foto til aflæsning</button></p>
+  </form>
+</div>
+<section class="boks">
+  <h2>Sådan foregår det</h2>
+  <ol>
+    <li>Filen gemmes uændret som originalbilag med fortløbende bilagsnummer og kontrolsum (SHA-256).</li>
+    <li>Bilaget aflæses automatisk: modpart, dato, fakturanummer, beløb, moms og et forslag til konto og momskode.</li>
+    <li>Du kontrollerer og godkender forslaget, hvorefter posteringen bogføres og momsen registreres i momsregnskabet.</li>
+  </ol>
+</section>
+{% endblock %}

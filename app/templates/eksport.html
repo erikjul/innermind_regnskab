@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titel %}Eksport og backup{% endblock %}
+{% block indhold %}
+<h1>Eksport, backup og kontrolspor</h1>
+<div class="to-kolonner">
+  <section class="boks">
+    <h2>Integritet</h2>
+    {% if kaede_ok %}<p class="ok">✔ Posteringskæden er intakt – ingen posteringer er ændret eller fjernet.</p>
+    {% else %}<p class="roed">✘ Kæden er brudt:</p><ul>{% for f in kaedefejl %}<li>{{ f }}</li>{% endfor %}</ul>{% endif %}
+    <h2>SAF-T-eksport</h2>
+    <p class="lille">Standard Audit File for Tax – det format myndighederne kan kræve regnskabet udleveret i (bogføringslovens § 16).</p>
+    <form method="get" action="/eksport/saft" class="filter">Fra <input type="date" name="fra" value="{{ idag.year }}-01-01" required> Til <input type="date" name="til" value="{{ idag.year }}-12-31" required> <button>Hent SAF-T (XML)</button></form>
+    <p><a class="knap" href="/eksport/posteringer.csv">Hent alle posteringer (CSV)</a></p>
+    <h2>Lås periode</h2>
+    <form method="post" action="/eksport/laas" class="filter" onsubmit="return confirm('Lås perioden? Det kan ikke fortrydes.')">
+      Fra <input type="date" name="fra" required> Til <input type="date" name="til" required> <input name="aarsag" placeholder="Årsag" value="Regnskabsår afsluttet"> <button>Lås</button></form>
+    {% if laase %}<ul class="lille">{% for l in laase %}<li>{{ l.fra|dato }} – {{ l.til|dato }}: {{ l.aarsag }} (låst {{ l.oprettet|dato }})</li>{% endfor %}</ul>{% endif %}
+  </section>
+  <section class="boks">
+    <h2>Sikkerhedskopi</h2>
+    <p class="lille">Zip med database, alle originale bilag og posteringer i JSON. Datamappe: <code>{{ data_dir }}</code>. Opbevar kopien et andet sted end computeren (fx cloud), og gem materialet i 5 år fra regnskabsårets udløb.</p>
+    <p><form method="post" action="/eksport/backup" class="inline"><button class="primary">Gem sikkerhedskopi i backup-mappen</button></form>
+       <a class="knap" href="/eksport/backup/download">Download sikkerhedskopi</a></p>
+    {% if backups %}<h3>Seneste kopier</h3><ul class="lille">{% for b in backups[:10] %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+</div>
+<section class="boks">
+  <h2>Kontrolspor (seneste 200 handlinger)</h2>
+  <table class="lille">
+    <tr><th>Tid</th><th>Handling</th><th>Entitet</th><th>Detaljer</th></tr>
+    {% for l in log %}<tr><td>{{ l.tid|tid }}</td><td>{{ l.handling }}</td><td>{{ l.entitet }} {{ l.entitet_id }}</td><td class="mono">{{ l.detaljer[:300] }}</td></tr>{% endfor %}
+  </table>
+</section>
+{% endblock %}

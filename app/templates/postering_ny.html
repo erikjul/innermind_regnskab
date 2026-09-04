@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block titel %}Ny postering{% endblock %}
+{% block indhold %}
+<h1>Manuel postering</h1>
+<p class="lille">Til posteringer uden faktura, fx bankgebyrer, private hævninger, kørselsgodtgørelse, afskrivninger og bankoverførsler. Vedhæft et bilag hvor det er muligt – bogføringsloven kræver dokumentation for alle registreringer.</p>
+<form class="boks formular" method="post" action="/posteringer/ny">
+  <div class="raekke">
+    <label>Dato <input type="date" name="dato" value="{{ idag.isoformat() }}" required></label>
+    <label>Tekst <input name="tekst" required></label>
+    <label>Bilag <select name="bilag_id"><option value="">– intet –</option>{% for b in bilag %}<option value="{{ b.id }}">{{ b.bilagsnr }} {{ b.original_filnavn }}</option>{% endfor %}</select></label>
+  </div>
+  <table class="linjer">
+    <tr><th>Konto</th><th>Tekst</th><th>Debet</th><th>Kredit</th><th>Momskode</th><th>Momsgrundlag</th></tr>
+    {% for i in range(6) %}
+    <tr>
+      <td><select name="konto_{{ i }}"><option value=""></option>{% for k in konti %}<option value="{{ k.nummer }}">{{ k.nummer }} {{ k.navn }}</option>{% endfor %}</select></td>
+      <td><input name="tekst_{{ i }}"></td>
+      <td><input name="debet_{{ i }}" inputmode="decimal" class="beloeb-input"></td>
+      <td><input name="kredit_{{ i }}" inputmode="decimal" class="beloeb-input"></td>
+      <td><select name="momskode_{{ i }}"><option value=""></option>{% for m in momskoder %}<option value="{{ m.kode }}">{{ m.kode }}</option>{% endfor %}</select></td>
+      <td><input name="grundlag_{{ i }}" inputmode="decimal" class="beloeb-input"></td>
+    </tr>
+    {% endfor %}
+    <tr class="sum"><td colspan="2">Sum</td><td id="sum-debet">0,00</td><td id="sum-kredit">0,00</td><td colspan="2" id="difference"></td></tr>
+  </table>
+  <p class="lille">Momskode og momsgrundlag udfyldes kun på omsætnings-/omkostningslinjen, hvis posteringen skal indgå i momsangivelsens rubrikker. Momsbeløb bogføres på momskontiene (5610/6210/6220) med samme momskode.</p>
+  <p><button class="primary">Bogfør</button></p>
+</form>
+{% endblock %}

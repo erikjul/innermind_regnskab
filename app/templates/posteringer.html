@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titel %}Posteringer{% endblock %}
+{% block indhold %}
+<h1>Posteringer <a class="knap" href="/posteringer/ny">+ Manuel postering</a></h1>
+<form class="filter" method="get">Fra <input type="date" name="fra" value="{{ fra }}"> Til <input type="date" name="til" value="{{ til }}"> <button>Vis</button></form>
+<table>
+  <tr><th>Nr.</th><th>Dato</th><th>Bilag</th><th>Tekst</th><th>Type</th><th>Konti</th><th class="beloeb">Beløb</th><th></th></tr>
+  {% for e in posteringer %}
+  <tr class="{% if e.er_storneret %}storneret{% endif %}">
+    <td><a href="/posteringer/{{ e.id }}">{{ e.loebenr }}</a></td><td>{{ e.dato|dato }}</td>
+    <td>{% if e.bilag %}<a href="/bilag/{{ e.bilag.id }}">{{ e.bilag.bilagsnr }}</a>{% endif %}</td>
+    <td>{{ e.tekst }}</td><td>{{ e.type }}</td>
+    <td class="lille">{% for l in e.linjer %}{{ l.konto }}{% if l.debet %} D{% else %} K{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td class="beloeb">{{ e.sum_debet|kr }}</td>
+    <td class="lille">{% if e.er_storneret %}tilbageført{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="8">Ingen posteringer.</td></tr>{% endfor %}
+</table>
+{% endblock %}

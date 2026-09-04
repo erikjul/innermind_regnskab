@@ -1,0 +1,99 @@
+{% extends "base.html" %}{% block titel %}Bilag {{ v.bilagsnr }}{% endblock %}
+{% block indhold %}
+<h1>Bilag {{ v.bilagsnr }} <span class="status {{ v.status }}">{{ STATUS_TEKST[v.status] }}</span></h1>
+{% if v.status == 'aflaeser' or v.status == 'uploadet' %}
+<div class="flash info" data-poll="/bilag/{{ v.id }}/status">Bilaget aflæses – siden opdateres automatisk.</div>
+{% endif %}
+{% if v.fejl %}<div class="flash fejl">{{ v.fejl }}</div>{% endif %}
+{% if v.noter %}<div class="flash info"><strong>Bemærkninger:</strong> {{ v.noter }}</div>{% endif %}
+<div class="to-kolonner bilagvisning">
+  <section class="boks">
+    <h2>Dokument</h2>
+    <p class="lille">{{ v.original_filnavn }} · {{ (v.stoerrelse / 1024)|round(0)|int }} KB · uploadet {{ v.uploadet|tid }} ({{ v.kilde }}) · SHA-256 {{ v.sha256[:16] }}…
+      <a href="/bilag/{{ v.id }}/fil" target="_blank">Åbn original</a></p>
+    {% if v.mime == 'application/pdf' %}
+      <iframe src="/bilag/{{ v.id }}/fil" class="pdf"></iframe>
+    {% else %}
+      <a href="/bilag/{{ v.id }}/fil" target="_blank"><img src="/bilag/{{ v.id }}/fil?visning=1" alt="Bilag" class="bilagbillede"></a>
+    {% endif %}
+  </section>
+  <section class="boks">
+    <h2>{% if v.status == 'bogfoert' %}Bogførte oplysninger{% else %}Kontrollér og bogfør{% endif %}</h2>
+    {% if v.status == 'bogfoert' and v.postering %}
+      <p>Bogført som <a href="/posteringer/{{ v.postering.id }}">postering nr. {{ v.postering.loebenr }}</a>. Bilaget kan ikke ændres – fejl rettes ved at tilbageføre posteringen.</p>
+    {% endif %}
+    <form method="post" action="/bilag/{{ v.id }}/gem" class="formular" {% if v.status == 'bogfoert' %}data-laast="1"{% endif %}>
+      <label>Bilagstype
+        <select name="dokumenttype">{% for k, t in dokumenttyper %}<option value="{{ k }}" {% if v.dokumenttype == k %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+      <label>Modpart (leverandør/kunde) <input name="modpart" value="{{ v.modpart or '' }}"></label>
+      <div class="raekke">
+        <label>CVR/momsnr. <input name="modpart_cvr" value="{{ v.modpart_cvr or '' }}"></label>
+        <label>Fakturanr. <input name="fakturanr" value="{{ v.fakturanr or '' }}"></label>
+      </div>
+      <div class="raekke">
+        <label>Bilagsdato <input type="date" name="dato" value="{{ v.dato.isoformat() if v.dato else '' }}" required></label>
+        <label>Forfaldsdato <input type="date" name="forfaldsdato" value="{{ v.forfaldsdato.isoformat() if v.forfaldsdato else '' }}"></label>
+      </div>
+      <label>Beløb inkl. moms ({{ v.valuta }}) <input name="beloeb_total" value="{{ v.beloeb_total|kr }}" inputmode="decimal" required>
+        {% if v.beloeb_moms is not none %}<span class="lille">Aflæst moms: {{ v.beloeb_moms|kr }}{% if v.beloeb_netto is not none %} · netto {{ v.beloeb_netto|kr }}{% endif %}</span>{% endif %}</label>
+      <label>Posteringstekst <input name="beskrivelse" value="{{ v.beskrivelse or '' }}" maxlength="200"></label>
+      <label>Konto
+        <select name="konto" required>
+          <option value="">– vælg –</option>
+          {% for k in konti if k.er_drift or k.type == 'aktiv' %}<option value="{{ k.nummer }}" data-moms="{{ k.standard_momskode or '' }}" {% if v.konto == k.nummer %}selected{% endif %}>{{ k.nummer }} {{ k.navn }}</option>{% endfor %}
+        </select></label>
+      <label>Momskode
+        <select name="momskode" required>
+          <option value="">– vælg –</option>
+          {% for m in momskoder %}<option value="{{ m.kode }}" {% if v.momskode == m.kode %}selected{% endif %}>{{ m.kode }} – {{ m.navn }}</option>{% endfor %}
+        </select></label>
+      <label>Modkonto (betalt fra / skyldes til)
+        <select name="modkonto" required>
+          {% for k in balancekonti %}<option value="{{ k.nummer }}" {% if (v.modkonto or indstillinger.standard_bankkonto) == k.nummer %}selected{% endif %}>{{ k.nummer }} {{ k.navn }}</option>{% endfor %}
+        </select>
+        <span class="lille">Betalt med erhvervskort/bank: bankkontoen. Ikke betalt endnu: kreditorer (køb) eller debitorer (salg). Betalt privat: private indskud/udlæg.</span></label>
+      <label>Noter <textarea name="noter" rows="2">{{ v.noter or '' }}</textarea></label>
+      {% if v.status != 'bogfoert' %}
+      <p class="knapper">
+        <button name="handling" value="gem">Gem</button>
+        <button name="handling" value="bogfoer" class="primary" {% if v.valuta != 'DKK' %}disabled title="Omregn først til DKK"{% endif %}>Bogfør</button>
+      </p>
+      {% endif %}
+    </form>
+    {% if v.valuta != 'DKK' and v.status != 'bogfoert' %}
+    <form method="post" action="/bilag/{{ v.id }}/valuta" class="formular boks-indre">
+      <h3>Omregn til DKK</h3>
+      <p class="lille">Bilaget er i {{ v.valuta }} ({{ v.beloeb_total|kr }}). Brug den faktiske kurs fra din bank eller Nationalbankens kurs på bilagsdatoen.</p>
+      <div class="raekke">
+        <label>Beløb i DKK inkl. moms <input name="beloeb_dkk" inputmode="decimal" required></label>
+        <label>Kurs/kilde (note) <input name="kurs_note" placeholder="fx kurs 7,46 Nationalbanken"></label>
+      </div>
+      <p><button>Omregn</button></p>
+    </form>
+    {% endif %}
+    {% if forslag %}
+    <h3>Forslag til postering</h3>
+    <table class="lille">
+      <tr><th>Konto</th><th class="beloeb">Debet</th><th class="beloeb">Kredit</th><th>Moms</th></tr>
+      {% for l in forslag %}<tr><td>{{ l.konto }} {{ kontinavne[l.konto].navn if l.konto in kontinavne else '' }}</td><td class="beloeb">{{ l.debet|kr if l.debet else '' }}</td><td class="beloeb">{{ l.kredit|kr if l.kredit else '' }}</td><td>{{ l.momskode or '' }}</td></tr>{% endfor %}
+    </table>
+    {% endif %}
+    {% if v.status != 'bogfoert' %}
+    <div class="handlinger">
+      <form method="post" action="/bilag/{{ v.id }}/aflaes"><button>Aflæs igen</button></form>
+      <form method="post" action="/bilag/{{ v.id }}/annuller" onsubmit="return confirm('Annullér bilaget? Filen bevares i arkivet.')">
+        <input name="aarsag" placeholder="Årsag til annullering"><button class="fare">Annullér bilag</button></form>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% if aflaesning %}
+<details class="boks"><summary>Rå aflæsning ({{ v.aflaesning_model }}, {{ v.aflaest|tid }})</summary>
+  <table class="lille">
+    {% for k, val in aflaesning.items() if k != 'linjer' %}<tr><th>{{ k }}</th><td>{{ val }}</td></tr>{% endfor %}
+  </table>
+  {% if aflaesning.linjer %}<h4>Linjer</h4><table class="lille"><tr><th>Beskrivelse</th><th class="beloeb">Beløb inkl. moms</th><th>Moms %</th></tr>
+  {% for l in aflaesning.linjer %}<tr><td>{{ l.beskrivelse }}</td><td class="beloeb">{{ l.beloeb_inkl_moms }}</td><td>{{ l.momssats_pct }}</td></tr>{% endfor %}</table>{% endif %}
+</details>
+{% endif %}
+{% endblock %}

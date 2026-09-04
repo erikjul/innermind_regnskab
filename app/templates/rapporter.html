@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titel %}Rapporter{% endblock %}
+{% block indhold %}
+<h1>Resultatopgørelse og balance</h1>
+<form class="filter" method="get">Fra <input type="date" name="fra" value="{{ fra }}"> Til <input type="date" name="til" value="{{ til }}"> <button>Vis</button></form>
+<div class="to-kolonner">
+  <section class="boks">
+    <h2>Resultatopgørelse {{ fra|dato }} – {{ til|dato }}</h2>
+    <table>
+      {% for gruppe, rows in res.grupper.items() %}
+      <tr class="gruppe"><th colspan="2">{{ gruppe.split(':')[1] }}</th></tr>
+      {% for a, b in rows %}<tr><td><a href="/kontoplan/{{ a.nummer }}?fra={{ fra }}&til={{ til }}">{{ a.nummer }} {{ a.navn }}</a></td><td class="beloeb">{{ b|kr }}</td></tr>{% endfor %}
+      {% endfor %}
+      <tr class="sum"><td>Indtægter i alt</td><td class="beloeb">{{ res.indtaegter|kr }}</td></tr>
+      <tr class="sum"><td>Omkostninger i alt</td><td class="beloeb">{{ res.omkostninger|kr }}</td></tr>
+      <tr class="sum total"><td>Resultat før skat</td><td class="beloeb">{{ res.resultat|kr }}</td></tr>
+    </table>
+  </section>
+  <section class="boks">
+    <h2>Balance pr. {{ til|dato }}</h2>
+    <table>
+      <tr class="gruppe"><th colspan="2">Aktiver</th></tr>
+      {% for a, b in bal.aktiver %}<tr><td><a href="/kontoplan/{{ a.nummer }}">{{ a.nummer }} {{ a.navn }}</a></td><td class="beloeb">{{ b|kr }}</td></tr>{% endfor %}
+      <tr class="sum"><td>Aktiver i alt</td><td class="beloeb">{{ bal.sum_aktiver|kr }}</td></tr>
+      <tr class="gruppe"><th colspan="2">Egenkapital</th></tr>
+      {% for a, b in bal.egenkapital %}<tr><td><a href="/kontoplan/{{ a.nummer }}">{{ a.nummer }} {{ a.navn }}</a></td><td class="beloeb">{{ b|kr }}</td></tr>{% endfor %}
+      <tr><td>Periodens resultat (ikke overført)</td><td class="beloeb">{{ bal.resultat|kr }}</td></tr>
+      <tr class="gruppe"><th colspan="2">Gæld</th></tr>
+      {% for a, b in bal.passiver %}<tr><td><a href="/kontoplan/{{ a.nummer }}">{{ a.nummer }} {{ a.navn }}</a></td><td class="beloeb">{{ b|kr }}</td></tr>{% endfor %}
+      <tr class="sum total"><td>Passiver i alt</td><td class="beloeb">{{ bal.sum_passiver_og_egenkapital|kr }}</td></tr>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titel %}Regnskab{% endblock %} – {{ indstillinger.firmanavn or 'Regnskab' }}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">{{ indstillinger.firmanavn or 'Regnskab' }}</a>
+  <nav>
+    <a href="/bilag/upload" class="primary">+ Upload bilag</a>
+    <a href="/bilag">Bilag</a>
+    <a href="/posteringer">Posteringer</a>
+    <a href="/moms">Moms</a>
+    <a href="/rapporter">Rapporter</a>
+    <a href="/kontoplan">Kontoplan</a>
+    <a href="/eksport">Eksport &amp; backup</a>
+    <a href="/indstillinger">Indstillinger</a>
+  </nav>
+</header>
+<main>
+  {% if besked %}<div class="flash ok">{{ besked }}</div>{% endif %}
+  {% if fejl %}<div class="flash fejl">{{ fejl }}</div>{% endif %}
+  {% block indhold %}{% endblock %}
+</main>
+<footer>InnerMind Regnskab · Bogføring efter bogføringsloven · Beløb i DKK</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

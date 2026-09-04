@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block titel %}Postering {{ e.loebenr }}{% endblock %}
+{% block indhold %}
+<h1>Postering nr. {{ e.loebenr }} {% if e.er_storneret %}<span class="status fejl">Tilbageført</span>{% endif %}</h1>
+<section class="boks">
+  <table class="noegletal">
+    <tr><td>Dato</td><td>{{ e.dato|dato }}</td></tr>
+    <tr><td>Tekst</td><td>{{ e.tekst }}</td></tr>
+    <tr><td>Type</td><td>{{ e.type }}</td></tr>
+    <tr><td>Bilag</td><td>{% if e.bilag %}<a href="/bilag/{{ e.bilag.id }}">Bilag {{ e.bilag.bilagsnr }}</a> – {{ e.bilag.original_filnavn }}{% else %}<em>intet bilag vedhæftet</em>{% endif %}</td></tr>
+    <tr><td>Registreret</td><td>{{ e.oprettet|tid }}</td></tr>
+    {% if storno_af %}<tr><td>Tilbagefører</td><td><a href="/posteringer/{{ storno_af.id }}">nr. {{ storno_af.loebenr }}</a></td></tr>{% endif %}
+    {% if storneret_af %}<tr><td>Tilbageført af</td><td><a href="/posteringer/{{ storneret_af.id }}">nr. {{ storneret_af.loebenr }}</a></td></tr>{% endif %}
+    <tr><td>Hash</td><td class="lille mono">{{ e.hash }}</td></tr>
+  </table>
+  <table>
+    <tr><th>Konto</th><th>Tekst</th><th class="beloeb">Debet</th><th class="beloeb">Kredit</th><th>Momskode</th><th class="beloeb">Momsgrundlag</th></tr>
+    {% for l in e.linjer %}
+    <tr><td><a href="/kontoplan/{{ l.konto }}">{{ l.konto }} {{ konti[l.konto].navn if l.konto in konti else '' }}</a></td><td>{{ l.tekst or '' }}</td>
+      <td class="beloeb">{{ l.debet|kr if l.debet else '' }}</td><td class="beloeb">{{ l.kredit|kr if l.kredit else '' }}</td>
+      <td>{{ l.momskode or '' }}</td><td class="beloeb">{{ l.momsgrundlag|kr if l.momsgrundlag else '' }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% if not e.er_storneret and e.type != 'storno' %}
+<form class="boks formular" method="post" action="/posteringer/{{ e.id }}/storno" onsubmit="return confirm('Tilbagefør posteringen? Der oprettes en modpostering; den oprindelige bevares.')">
+  <h2>Tilbagefør (storno)</h2>
+  <p class="lille">Posteringer kan ikke slettes eller rettes (bogføringslovens § 8). Fejl rettes med en modpostering, som dateres i dag eller en anden åben dato.</p>
+  <div class="raekke">
+    <label>Dato for tilbageførsel <input type="date" name="dato" value="{{ idag.isoformat() }}"></label>
+    <label>Årsag <input name="aarsag" required placeholder="fx forkert konto"></label>
+  </div>
+  <p><button class="fare">Tilbagefør postering</button></p>
+</form>
+{% endif %}
+{% endblock %}

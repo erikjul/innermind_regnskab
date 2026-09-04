@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titel %}Konto {{ konto.nummer }}{% endblock %}
+{% block indhold %}
+<h1>{{ konto.nummer }} {{ konto.navn }}</h1>
+<form class="filter" method="get">Fra <input type="date" name="fra" value="{{ fra }}"> Til <input type="date" name="til" value="{{ til }}"> <button>Vis</button></form>
+<table>
+  <tr><th>Dato</th><th>Nr.</th><th>Bilag</th><th>Tekst</th><th class="beloeb">Debet</th><th class="beloeb">Kredit</th><th class="beloeb">Saldo</th></tr>
+  {% for r in rows %}
+  {% if r.primo %}<tr class="sum"><td colspan="6">Primo</td><td class="beloeb">{{ r.saldo|kr }}</td></tr>
+  {% else %}
+  <tr><td>{{ r.postering.dato|dato }}</td><td><a href="/posteringer/{{ r.postering.id }}">{{ r.postering.loebenr }}</a></td>
+    <td>{% if r.postering.bilag %}<a href="/bilag/{{ r.postering.bilag.id }}">{{ r.postering.bilag.bilagsnr }}</a>{% endif %}</td>
+    <td>{{ r.linje.tekst or r.postering.tekst }}</td><td class="beloeb">{{ r.linje.debet|kr if r.linje.debet else '' }}</td>
+    <td class="beloeb">{{ r.linje.kredit|kr if r.linje.kredit else '' }}</td><td class="beloeb">{{ r.saldo|kr }}</td></tr>
+  {% endif %}
+  {% else %}<tr><td colspan="7">Ingen posteringer på kontoen.</td></tr>{% endfor %}
+</table>
+{% endblock %}

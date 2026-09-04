@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block titel %}Oversigt{% endblock %}
+{% block indhold %}
+<h1>Oversigt {{ aar }}</h1>
+{% if not kaede_ok %}<div class="flash fejl"><strong>Advarsel:</strong> Posteringskæden er brudt. {{ kaedefejl|join(' ') }}</div>{% endif %}
+<div class="kort-raekke">
+  <a class="kort" href="/bilag?status=klar"><span class="tal">{{ status.get('klar', 0) }}</span>Bilag klar til bogføring</a>
+  <a class="kort" href="/bilag?status=aflaeser"><span class="tal">{{ status.get('aflaeser', 0) + status.get('uploadet', 0) }}</span>Under aflæsning</a>
+  <a class="kort" href="/bilag?status=fejl"><span class="tal {% if status.get('fejl') %}roed{% endif %}">{{ status.get('fejl', 0) }}</span>Fejlede aflæsninger</a>
+  <a class="kort" href="/bilag?status=bogfoert"><span class="tal">{{ status.get('bogfoert', 0) }}</span>Bogførte bilag</a>
+</div>
+<div class="to-kolonner">
+  <section class="boks">
+    <h2>Resultat {{ aar }}</h2>
+    <table class="noegletal">
+      <tr><td>Indtægter</td><td class="beloeb">{{ res.indtaegter|kr }}</td></tr>
+      <tr><td>Omkostninger</td><td class="beloeb">{{ res.omkostninger|kr }}</td></tr>
+      <tr class="sum"><td>Resultat før skat</td><td class="beloeb">{{ res.resultat|kr }}</td></tr>
+      <tr><td>Bank ({{ indstillinger.standard_bankkonto }})</td><td class="beloeb">{{ bank|kr }}</td></tr>
+    </table>
+    <p><a href="/rapporter">Se resultatopgørelse og balance →</a></p>
+  </section>
+  <section class="boks">
+    <h2>Moms – {{ periode[2] }}</h2>
+    <table class="noegletal">
+      <tr><td>Salgsmoms</td><td class="beloeb">{{ moms.felter.salgsmoms|kr }}</td></tr>
+      <tr><td>Moms af køb i udlandet</td><td class="beloeb">{{ (moms.felter.moms_varekoeb_udland + moms.felter.moms_ydelseskoeb_udland)|kr }}</td></tr>
+      <tr><td>Købsmoms</td><td class="beloeb">{{ moms.felter.koebsmoms|kr }}</td></tr>
+      <tr class="sum"><td>{% if moms.momstilsvar >= 0 %}Moms at betale{% else %}Moms til gode{% endif %}</td><td class="beloeb">{{ moms.momstilsvar|kr }}</td></tr>
+    </table>
+    <p><a href="/moms">Se momsregnskab →</a></p>
+  </section>
+</div>
+<section class="boks">
+  <h2>Seneste bilag</h2>
+  {% if seneste %}
+  <table>
+    <tr><th>Nr.</th><th>Dato</th><th>Modpart</th><th>Beskrivelse</th><th class="beloeb">Beløb</th><th>Status</th></tr>
+    {% for v in seneste %}
+    <tr>
+      <td><a href="/bilag/{{ v.id }}">{{ v.bilagsnr }}</a></td><td>{{ v.dato|dato }}</td><td>{{ v.modpart or '' }}</td>
+      <td>{{ v.beskrivelse or v.original_filnavn }}</td><td class="beloeb">{{ v.beloeb_total|kr }}</td>
+      <td><span class="status {{ v.status }}">{{ STATUS_TEKST[v.status] }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>Ingen bilag endnu. <a href="/bilag/upload">Upload det første bilag</a>.</p>{% endif %}
+</section>
+{% endblock %}
