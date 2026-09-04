@@ -66,10 +66,14 @@ def lav_backup(session: Session) -> bytes:
     return buf.getvalue()
 
 
-def gem_backup(session: Session) -> Path:
+def gem_backup(session: Session, behold: int = 30) -> Path:
+    """Gemmer en ny zip i backup-mappen og beholder de seneste `behold` kopier."""
     config.BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     sti = config.BACKUP_DIR / f"backup_{datetime.now():%Y%m%d_%H%M%S}.zip"
     sti.write_bytes(lav_backup(session))
+    gamle = sorted(config.BACKUP_DIR.glob("backup_*.zip"))
+    for g in gamle[:-behold] if behold > 0 else []:
+        g.unlink(missing_ok=True)
     return sti
 
 

@@ -109,7 +109,7 @@ data/            oprettes automatisk: regnskab.db, bilag/, backup/  (ikke i git)
 | Rettelser må ikke skjule det oprindelige indhold | § 8 | Posteringer kan ikke ændres eller slettes – kun tilbageføres; hash-kæde afslører manipulation |
 | Bilag skal dokumentere registreringerne (dato, beløb, udsteder, modtager, moms) | § 9 | Originalfilen gemmes uændret med kontrolsum; felterne aflæses og gemmes |
 | Opbevaring i 5 år fra regnskabsårets udløb | § 12 | Bilag og database ligger i `data/`; annullerede bilag slettes aldrig |
-| Digital opbevaring og sikkerhedskopi | §§ 13, 16 | Zip-backup med alt materiale – **du skal selv gemme kopien hos en tredjepart (cloud) regelmæssigt**, fx med et cron-job der kører `python -m app.backup` og synkroniserer `data/backup/` |
+| Digital opbevaring og sikkerhedskopi | §§ 13, 16 | Zip-backup med alt materiale – **du skal selv gemme kopien hos en tredjepart (cloud) regelmæssigt**, sæt `REGNSKAB_BACKUP_DIR` til en cloud-synkroniseret mappe og kør `python -m app.backup` dagligt (cron / Opgavestyring); de seneste 30 kopier beholdes |
 | SAF-T-eksport til myndighederne | § 16 | *Eksport & backup → Hent SAF-T*. Filen følger strukturen i dansk SAF-T Financial (OECD 2.0); validér mod Erhvervsstyrelsens aktuelle XSD, før den afleveres |
 | Standardkontoplan | § 16 / bekendtgørelse om digitale bogføringssystemer | Feltet *Standardkonto* på hver konto bruges til at mappe til Erhvervsstyrelsens standardkontoplan; udfyld det (evt. sammen med din revisor) |
 | Momsregnskab | Momsloven / momsbekendtgørelsen | Momsangivelsens felter og rubrikker beregnes fra momskoderne; periodeafregning låser perioden |

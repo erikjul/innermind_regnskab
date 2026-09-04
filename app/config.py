@@ -4,7 +4,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("REGNSKAB_DATA_DIR", BASE_DIR / "data"))
 BILAG_DIR = DATA_DIR / "bilag"
-BACKUP_DIR = DATA_DIR / "backup"
+# Sæt REGNSKAB_BACKUP_DIR til en mappe, der synkroniseres til en cloud-tjeneste (OneDrive, Dropbox, Google Drive)
+BACKUP_DIR = Path(os.environ.get("REGNSKAB_BACKUP_DIR", DATA_DIR / "backup"))
 DB_PATH = DATA_DIR / "regnskab.db"
 DATABASE_URL = os.environ.get("REGNSKAB_DATABASE_URL", f"sqlite:///{DB_PATH}")
 
