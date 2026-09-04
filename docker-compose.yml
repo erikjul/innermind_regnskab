@@ -1,0 +1,48 @@
+# Produktion: regnskabsprogram + Caddy (automatisk HTTPS) + daglig backup.
+# Kopiér .env.example til .env og udfyld ANTHROPIC_API_KEY, REGNSKAB_DOMAENE og REGNSKAB_SESSION_SECRET.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REGNSKAB_HTTPS: "1"
+    volumes:
+      - regnskab_data:/data
+      - regnskab_backup:/backup
+    expose:
+      - "8000"
+
+  backup:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - regnskab_data:/data
+      - regnskab_backup:/backup
+    # Tager en sikkerhedskopi hver nat kl. 02 (containerens tid er UTC) og beholder de seneste 30
+    command: >
+      sh -c 'while true; do
+               python -m app.backup;
+               sleep $$(( (26*3600 - ($$(date +%s) % 86400)) % 86400 ));
+             done'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  regnskab_data:
+  regnskab_backup:
+  caddy_data:
+  caddy_config:

@@ -9,6 +9,7 @@
 <body>
 <header class="top">
   <a class="brand" href="/">{{ indstillinger.firmanavn or 'Regnskab' }}</a>
+  {% if bruger %}
   <nav>
     <a href="/bilag/upload" class="primary">+ Upload bilag</a>
     <a href="/bilag">Bilag</a>
@@ -18,7 +19,10 @@
     <a href="/kontoplan">Kontoplan</a>
     <a href="/eksport">Eksport &amp; backup</a>
     <a href="/indstillinger">Indstillinger</a>
+    {% if er_admin %}<a href="/brugere">Brugere</a>{% endif %}
   </nav>
+  <form method="post" action="/logud" class="logud"><span class="lille">{{ bruger }}</span> <button class="lille">Log ud</button></form>
+  {% endif %}
 </header>
 <main>
   {% if besked %}<div class="flash ok">{{ besked }}</div>{% endif %}

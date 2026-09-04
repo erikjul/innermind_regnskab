@@ -36,3 +36,21 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def migrer(eng=None) -> None:
+    """Tilføjer kolonner, som er kommet til efter første version (SQLite kan ikke gøre det via create_all)."""
+    from sqlalchemy import inspect, text
+    eng = eng or engine
+    nye = {"bilag": [("uploadet_af", "VARCHAR(60) DEFAULT ''")],
+           "posteringer": [("oprettet_af", "VARCHAR(60) DEFAULT ''")],
+           "kontrolspor": [("bruger", "VARCHAR(60) DEFAULT ''")]}
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for tabel, kolonner in nye.items():
+            if not insp.has_table(tabel):
+                continue
+            findes = {c["name"] for c in insp.get_columns(tabel)}
+            for navn, typ in kolonner:
+                if navn not in findes:
+                    conn.execute(text(f"ALTER TABLE {tabel} ADD COLUMN {navn} {typ}"))

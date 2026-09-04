@@ -12,6 +12,9 @@ DATABASE_URL = os.environ.get("REGNSKAB_DATABASE_URL", f"sqlite:///{DB_PATH}")
 # Model til fakturaaflæsning (Claude API)
 CLAUDE_MODEL = os.environ.get("REGNSKAB_CLAUDE_MODEL", "claude-opus-5")
 
+# Sæt REGNSKAB_HTTPS=1 når programmet kører bag HTTPS (Caddy); så sendes login-cookien kun krypteret
+HTTPS = os.environ.get("REGNSKAB_HTTPS", "0") in ("1", "true", "ja")
+
 MAX_UPLOAD_BYTES = 32 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif", ".gif", ".tif", ".tiff", ".bmp"}
 IMAGE_EXTENSIONS = ALLOWED_EXTENSIONS - {".pdf"}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block titel %}Første opsætning{% endblock %}
+{% block indhold %}
+<div class="login">
+  <form class="boks formular" method="post" action="/opsaetning">
+    <h1>Opret administrator</h1>
+    <p class="lille">Der er ingen brugere endnu. Opret den første bruger, som bliver administrator og kan oprette flere brugere.</p>
+    <label>Brugernavn <input name="brugernavn" autocomplete="username" required></label>
+    <label>Fulde navn <input name="navn"></label>
+    <label>Adgangskode (mindst 10 tegn) <input type="password" name="kodeord" autocomplete="new-password" minlength="10" required></label>
+    <label>Gentag adgangskode <input type="password" name="kodeord2" autocomplete="new-password" minlength="10" required></label>
+    <p><button class="primary">Opret og log ind</button></p>
+  </form>
+</div>
+{% endblock %}

@@ -74,10 +74,11 @@ def test_anvend_paa_bilag():
     assert v.konto is None and v.momskode is None
 
 
-def test_web_flow_med_simuleret_aflaesning(db, monkeypatch):
+def test_web_flow_med_simuleret_aflaesning(client, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
     monkeypatch.setattr(extraction, "aflaes", lambda *a, **k: SVAR)
-    with TestClient(main.app) as c:
+    c = client
+    if True:
         r = c.post("/bilag/upload", files=[("filer", ("foto.jpg", _foto(), "image/jpeg"))], data={"kilde": "kamera"}, follow_redirects=False)
         assert r.status_code == 303
         assert c.get("/bilag/1/status").json()["status"] == "klar"  # baggrundsjob er kørt når TestClient svarer

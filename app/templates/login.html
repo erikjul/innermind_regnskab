@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titel %}Log ind{% endblock %}
+{% block indhold %}
+<div class="login">
+  <form class="boks formular" method="post" action="/login">
+    <h1>Log ind</h1>
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Brugernavn <input name="brugernavn" autocomplete="username" autofocus required></label>
+    <label>Adgangskode <input type="password" name="kodeord" autocomplete="current-password" required></label>
+    <p><button class="primary">Log ind</button></p>
+  </form>
+</div>
+{% endblock %}

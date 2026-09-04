@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block titel %}Brugere{% endblock %}
+{% block indhold %}
+<h1>Brugere</h1>
+<table>
+  <tr><th>Brugernavn</th><th>Navn</th><th>Rolle</th><th>Sidst logget ind</th><th>Ny adgangskode</th><th></th></tr>
+  {% for u in brugere %}
+  <tr class="{% if not u.aktiv %}inaktiv{% endif %}">
+    <td>{{ u.brugernavn }}</td><td>{{ u.navn }}</td><td>{% if u.admin %}administrator{% else %}bruger{% endif %}</td>
+    <td>{{ u.sidst_logget_ind|tid }}</td>
+    <td><form method="post" action="/brugere/{{ u.id }}/kodeord" class="inline"><input type="password" name="kodeord" minlength="10" placeholder="mindst 10 tegn" autocomplete="new-password"> <button class="lille">Skift</button></form></td>
+    <td>{% if u.brugernavn != bruger %}<form method="post" action="/brugere/{{ u.id }}/aktiv"><button class="lille">{% if u.aktiv %}Deaktivér{% else %}Aktivér{% endif %}</button></form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+<form class="boks formular" method="post" action="/brugere">
+  <h2>Opret bruger</h2>
+  <div class="raekke">
+    <label>Brugernavn <input name="brugernavn" required></label>
+    <label>Fulde navn <input name="navn"></label>
+    <label>Adgangskode (mindst 10 tegn) <input type="password" name="kodeord" minlength="10" autocomplete="new-password" required></label>
+  </div>
+  <label><input type="checkbox" name="admin" value="1"> Administrator (kan oprette og deaktivere brugere)</label>
+  <p><button>Opret bruger</button></p>
+</form>
+<p class="lille">Brugere slettes ikke, kun deaktiveres, så kontrolsporet stadig viser, hvem der har bogført hvad.</p>
+{% endblock %}

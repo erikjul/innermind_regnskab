@@ -8,19 +8,45 @@ from pathlib import Path
 
 import anthropic
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from . import backup, bookkeeping as bk, config, extraction, files, kontoplan, saft, vat
-from .db import Base, SessionLocal, engine, get_db
-from .models import Account, AuditLog, JournalEntry, JournalLine, PeriodLock, Settings, VatCode, VatSettlement, Voucher
+from . import auth, backup, bookkeeping as bk, config, extraction, files, kontoplan, saft, vat
+from .db import Base, SessionLocal, engine, get_db, migrer
+from .models import Account, AuditLog, JournalEntry, JournalLine, PeriodLock, Settings, User, VatCode, VatSettlement, Voucher
 from .money import fra_oere, til_oere
 
 app = FastAPI(title="InnerMind Regnskab")
 HER = Path(__file__).parent
+OFFENTLIGE_STIER = ("/login", "/opsaetning", "/static/", "/sundhed")
+
+
+@app.middleware("http")
+async def kraev_login(request: Request, call_next):
+    """Alle sider kræver login, bortset fra login, første opsætning og statiske filer."""
+    sti = request.url.path
+    bruger = request.session.get("bruger")
+    if bruger:
+        token = auth.aktuel_bruger.set(bruger)
+        try:
+            return await call_next(request)
+        finally:
+            auth.aktuel_bruger.reset(token)
+    if sti.startswith(OFFENTLIGE_STIER):
+        return await call_next(request)
+    if request.method == "GET":
+        return RedirectResponse(f"/login?next={sti}", status_code=303)
+    return JSONResponse({"fejl": "Log ind først."}, status_code=401)
+
+
+# Tilføjes efter login-middlewaren, så sessionen er læst, når loginkravet tjekkes (sidst tilføjet = yderst).
+app.add_middleware(SessionMiddleware, secret_key=auth.session_hemmelighed(), session_cookie="regnskab_session",
+                   max_age=12 * 3600, same_site="lax", https_only=config.HTTPS)
+
 app.mount("/static", StaticFiles(directory=HER / "static"), name="static")
 templates = Jinja2Templates(directory=HER / "templates")
 templates.env.filters["kr"] = fra_oere
@@ -39,6 +65,7 @@ async def lifespan(_app: FastAPI):
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     config.BILAG_DIR.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(engine)
+    migrer(engine)
     with SessionLocal() as s:
         kontoplan.seed(s, Account, VatCode, Settings)
     yield
@@ -53,6 +80,8 @@ def render(request: Request, navn: str, db: Session, **ctx):
     ctx.setdefault("fejl", request.query_params.get("fejl"))
     ctx.setdefault("idag", date.today())
     ctx.setdefault("STATUS_TEKST", STATUS_TEKST)
+    ctx.setdefault("bruger", request.session.get("bruger"))
+    ctx.setdefault("er_admin", request.session.get("admin", False))
     return templates.TemplateResponse(request, navn, ctx)
 
 
@@ -85,6 +114,130 @@ def _konti(db: Session, kun_aktive=True) -> list[Account]:
 
 def _momskoder(db: Session) -> list[VatCode]:
     return list(db.scalars(select(VatCode).where(VatCode.aktiv.is_(True))))
+
+
+# --- Login og brugere ----------------------------------------------------------------
+
+def _klient_ip(request: Request) -> str:
+    return request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
+
+
+@app.get("/sundhed")
+def sundhed():
+    return {"status": "ok"}
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_form(request: Request, next: str = "/", db: Session = Depends(get_db)):
+    if auth.antal_brugere(db) == 0:
+        return RedirectResponse("/opsaetning", status_code=303)
+    if request.session.get("bruger"):
+        return RedirectResponse("/", status_code=303)
+    return render(request, "login.html", db, next=next)
+
+
+@app.post("/login")
+def login(request: Request, brugernavn: str = Form(...), kodeord: str = Form(...), next: str = Form("/"),
+          db: Session = Depends(get_db)):
+    ip = _klient_ip(request)
+    if auth.er_spaerret(ip):
+        return render(request, "login.html", db, next=next, fejl="For mange mislykkede forsøg. Prøv igen om 15 minutter.")
+    u = auth.log_ind(db, brugernavn, kodeord, ip)
+    if u is None:
+        auth.aktuel_bruger.set(brugernavn.strip().lower()[:60])
+        bk.log(db, "login_fejlet", "bruger", brugernavn.strip().lower()[:60], {"ip": ip}); db.commit()
+        return render(request, "login.html", db, next=next, fejl="Forkert brugernavn eller adgangskode.")
+    request.session.clear()
+    request.session["bruger"] = u.brugernavn
+    request.session["admin"] = u.admin
+    auth.aktuel_bruger.set(u.brugernavn)
+    bk.log(db, "login", "bruger", u.brugernavn, {"ip": ip}); db.commit()
+    if not next.startswith("/") or next.startswith("//"):
+        next = "/"
+    return RedirectResponse(next, status_code=303)
+
+
+@app.post("/logud")
+def logud(request: Request, db: Session = Depends(get_db)):
+    bk.log(db, "logud", "bruger", request.session.get("bruger", "")); db.commit()
+    request.session.clear()
+    return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/opsaetning", response_class=HTMLResponse)
+def opsaetning_form(request: Request, db: Session = Depends(get_db)):
+    if auth.antal_brugere(db) > 0:
+        return RedirectResponse("/login", status_code=303)
+    return render(request, "opsaetning.html", db)
+
+
+@app.post("/opsaetning")
+def opsaetning(request: Request, brugernavn: str = Form(...), navn: str = Form(""), kodeord: str = Form(...),
+               kodeord2: str = Form(...), db: Session = Depends(get_db)):
+    if auth.antal_brugere(db) > 0:
+        return RedirectResponse("/login", status_code=303)
+    if kodeord != kodeord2:
+        return render(request, "opsaetning.html", db, fejl="Adgangskoderne er ikke ens.")
+    try:
+        u = auth.opret_bruger(db, brugernavn, navn, kodeord, admin=True)
+    except ValueError as e:
+        return render(request, "opsaetning.html", db, fejl=str(e))
+    auth.aktuel_bruger.set(u.brugernavn)
+    bk.log(db, "bruger_oprettet", "bruger", u.brugernavn, {"admin": True, "foerste": True}); db.commit()
+    request.session["bruger"] = u.brugernavn
+    request.session["admin"] = True
+    return redirect("/", besked=f"Velkommen, {u.navn}. Administratorbrugeren er oprettet.")
+
+
+def _kraev_admin(request: Request):
+    if not request.session.get("admin"):
+        raise HTTPException(403, "Kun administratorer kan administrere brugere.")
+
+
+@app.get("/brugere", response_class=HTMLResponse)
+def brugere(request: Request, db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    return render(request, "brugere.html", db, brugere=list(db.scalars(select(User).order_by(User.brugernavn))))
+
+
+@app.post("/brugere")
+def bruger_opret(request: Request, brugernavn: str = Form(...), navn: str = Form(""), kodeord: str = Form(...),
+                 admin: str = Form(""), db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    try:
+        u = auth.opret_bruger(db, brugernavn, navn, kodeord, admin=bool(admin))
+    except ValueError as e:
+        return redirect("/brugere", fejl=str(e))
+    bk.log(db, "bruger_oprettet", "bruger", u.brugernavn, {"admin": u.admin}); db.commit()
+    return redirect("/brugere", besked=f"Bruger {u.brugernavn} oprettet.")
+
+
+@app.post("/brugere/{bruger_id}/kodeord")
+def bruger_kodeord(request: Request, bruger_id: int, kodeord: str = Form(...), db: Session = Depends(get_db)):
+    u = db.get(User, bruger_id)
+    if u is None:
+        raise HTTPException(404)
+    if u.brugernavn != request.session.get("bruger"):
+        _kraev_admin(request)
+    fejl = auth.valider_kodeord(kodeord)
+    if fejl:
+        return redirect("/brugere" if request.session.get("admin") else "/", fejl=fejl)
+    u.kodeord_hash = auth.hash_kodeord(kodeord)
+    bk.log(db, "kodeord_aendret", "bruger", u.brugernavn); db.commit()
+    return redirect("/brugere" if request.session.get("admin") else "/", besked="Adgangskoden er ændret.")
+
+
+@app.post("/brugere/{bruger_id}/aktiv")
+def bruger_aktiv(request: Request, bruger_id: int, db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    u = db.get(User, bruger_id)
+    if u is None:
+        raise HTTPException(404)
+    if u.brugernavn == request.session.get("bruger"):
+        return redirect("/brugere", fejl="Du kan ikke deaktivere dig selv.")
+    u.aktiv = not u.aktiv
+    bk.log(db, "bruger_aktiv_aendret", "bruger", u.brugernavn, {"aktiv": u.aktiv}); db.commit()
+    return redirect("/brugere", besked=f"{u.brugernavn} er nu {'aktiv' if u.aktiv else 'deaktiveret'}.")
 
 
 # --- Forside -----------------------------------------------------------------
@@ -182,7 +335,7 @@ async def upload(request: Request, bg: BackgroundTasks, filer: list[UploadFile] 
             meta = files.gem_bilag(indhold, f.filename, nr)
             dublet = db.scalar(select(Voucher).where(Voucher.sha256 == meta["sha256"], Voucher.status != "annulleret"))
             v = Voucher(bilagsnr=nr, kilde=kilde if kilde in ("upload", "kamera") else "upload",
-                        original_filnavn=f.filename, **meta)
+                        original_filnavn=f.filename, uploadet_af=auth.aktuel_bruger.get(), **meta)
             if dublet:
                 v.noter = f"OBS: Filen er identisk med bilag {dublet.bilagsnr} – muligvis en dublet."
             db.add(v); db.flush()

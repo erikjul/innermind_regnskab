@@ -49,6 +49,20 @@ Kør testene med:
 pytest
 ```
 
+## Login og brugere
+
+Alle sider kræver login. Første gang programmet startes, vises siden *Opret administrator*.
+Administratoren opretter derefter øvrige brugere under *Brugere*. Kontrolsporet og posteringerne
+registrerer, hvilken bruger der har gjort hvad. Brugere kan deaktiveres, men ikke slettes.
+
+Fra kommandolinjen: `python -m app.users opret <brugernavn> --admin`, `python -m app.users kodeord <brugernavn>`,
+`python -m app.users liste`.
+
+## Kør på en server
+
+Se [DEPLOY.md](DEPLOY.md): Docker Compose med programmet, natlig backup og Caddy med automatisk
+HTTPS. Så kan programmet bruges fra enhver browser, også fra en pc, hvor der ikke må installeres noget.
+
 ## Arbejdsgang
 
 1. **Upload bilag** – filen gemmes uændret som originalbilag med fortløbende bilagsnummer og
@@ -95,6 +109,8 @@ til kørselsgodtgørelse efter statens takster.
 ```
 app/
   main.py        webapplikation (FastAPI) – alle sider og formularer
+  auth.py        login, adgangskoder (scrypt), brugere, spærring ved gentagne fejl
+  users.py       kommandolinje til brugere
   models.py      datamodel (SQLite via SQLAlchemy); alle beløb i øre
   kontoplan.py   standardkontoplan og momskoder
   bookkeeping.py posteringer, storno, hash-kæde, periodelåse, momsafregning, rapporter
@@ -131,5 +147,4 @@ Bemærk:
   indbygget**. Bankafstemning gøres manuelt via kontokortet for bankkontoen.
 * Programmet erstatter ikke rådgivning – få din revisor til at gennemgå kontoplanen, momskoderne og
   den første momsangivelse.
-* Programmet er uden login og er beregnet til at køre lokalt eller bag en beskyttet forbindelse.
-  Sæt det aldrig direkte på internettet uden adgangskontrol (reverse proxy med login/HTTPS).
+* Sæt programmet kun på internettet bag HTTPS (opsætningen i DEPLOY.md gør det automatisk).

@@ -26,8 +26,8 @@
 <section class="boks">
   <h2>Kontrolspor (seneste 200 handlinger)</h2>
   <table class="lille">
-    <tr><th>Tid</th><th>Handling</th><th>Entitet</th><th>Detaljer</th></tr>
-    {% for l in log %}<tr><td>{{ l.tid|tid }}</td><td>{{ l.handling }}</td><td>{{ l.entitet }} {{ l.entitet_id }}</td><td class="mono">{{ l.detaljer[:300] }}</td></tr>{% endfor %}
+    <tr><th>Tid</th><th>Bruger</th><th>Handling</th><th>Entitet</th><th>Detaljer</th></tr>
+    {% for l in log %}<tr><td>{{ l.tid|tid }}</td><td>{{ l.bruger }}</td><td>{{ l.handling }}</td><td>{{ l.entitet }} {{ l.entitet_id }}</td><td class="mono">{{ l.detaljer[:300] }}</td></tr>{% endfor %}
   </table>
 </section>
 {% endblock %}

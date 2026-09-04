@@ -9,7 +9,7 @@
 <div class="to-kolonner bilagvisning">
   <section class="boks">
     <h2>Dokument</h2>
-    <p class="lille">{{ v.original_filnavn }} · {{ (v.stoerrelse / 1024)|round(0)|int }} KB · uploadet {{ v.uploadet|tid }} ({{ v.kilde }}) · SHA-256 {{ v.sha256[:16] }}…
+    <p class="lille">{{ v.original_filnavn }} · {{ (v.stoerrelse / 1024)|round(0)|int }} KB · uploadet {{ v.uploadet|tid }} ({{ v.kilde }}{% if v.uploadet_af %}, {{ v.uploadet_af }}{% endif %}) · SHA-256 {{ v.sha256[:16] }}…
       <a href="/bilag/{{ v.id }}/fil" target="_blank">Åbn original</a></p>
     {% if v.mime == 'application/pdf' %}
       <iframe src="/bilag/{{ v.id }}/fil" class="pdf"></iframe>

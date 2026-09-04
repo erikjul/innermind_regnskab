@@ -30,3 +30,5 @@ form.inline{display:inline}
 input[type=file]{width:100%;padding:1rem;border:2px dashed var(--line);border-radius:8px;background:#fafbfd}
 table.linjer input,table.linjer select{width:100%;padding:.3rem;border:1px solid var(--line);border-radius:4px;font:inherit}.beloeb-input{text-align:right}
 details.boks summary{cursor:pointer;font-weight:600}
+.login{max-width:420px;margin:3rem auto}.login h1{margin-top:0}
+.logud{margin-left:auto;display:flex;gap:.5rem;align-items:center}

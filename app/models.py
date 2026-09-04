@@ -33,6 +33,18 @@ class Settings(Base):
     momsafregning_konto: Mapped[int] = mapped_column(Integer, default=6230)
 
 
+class User(Base):
+    __tablename__ = "brugere"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    brugernavn: Mapped[str] = mapped_column(String(60), unique=True)
+    navn: Mapped[str] = mapped_column(String(120), default="")
+    kodeord_hash: Mapped[str] = mapped_column(String(200))
+    admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True)
+    oprettet: Mapped[datetime] = mapped_column(DateTime, default=now)
+    sidst_logget_ind: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class Account(Base):
     __tablename__ = "konti"
     nummer: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -77,6 +89,7 @@ class Voucher(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     stoerrelse: Mapped[int] = mapped_column(Integer)
     uploadet: Mapped[datetime] = mapped_column(DateTime, default=now)
+    uploadet_af: Mapped[str] = mapped_column(String(60), default="")
     aflaest: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     aflaesning_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     aflaesning_model: Mapped[str | None] = mapped_column(String(60), nullable=True)
@@ -118,6 +131,7 @@ class JournalEntry(Base):
     storno_af_id: Mapped[int | None] = mapped_column(ForeignKey("posteringer.id"), nullable=True)
     storneret_af_id: Mapped[int | None] = mapped_column(ForeignKey("posteringer.id"), nullable=True)
     oprettet: Mapped[datetime] = mapped_column(DateTime, default=now)
+    oprettet_af: Mapped[str] = mapped_column(String(60), default="")
     forrige_hash: Mapped[str] = mapped_column(String(64), default="")
     hash: Mapped[str] = mapped_column(String(64), default="")
     linjer: Mapped[list["JournalLine"]] = relationship(back_populates="postering", cascade="all, delete-orphan", order_by="JournalLine.id")
@@ -173,6 +187,7 @@ class AuditLog(Base):
     __tablename__ = "kontrolspor"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tid: Mapped[datetime] = mapped_column(DateTime, default=now)
+    bruger: Mapped[str] = mapped_column(String(60), default="")
     handling: Mapped[str] = mapped_column(String(60))
     entitet: Mapped[str] = mapped_column(String(40))
     entitet_id: Mapped[str] = mapped_column(String(40), default="")

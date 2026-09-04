@@ -1,0 +1,15 @@
+# Caddy henter og fornyer HTTPS-certifikatet automatisk for domænet i REGNSKAB_DOMAENE.
+# Uden eget domæne: brug serverens IP med sslip.io, fx REGNSKAB_DOMAENE=65-108-1-2.sslip.io
+{$REGNSKAB_DOMAENE} {
+    encode gzip
+    request_body {
+        max_size 40MB
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    reverse_proxy app:8000
+}

@@ -25,7 +25,8 @@ class BogfoeringsFejl(Exception):
 def log(session: Session, handling: str, entitet: str, entitet_id="", detaljer: dict | str = "") -> None:
     if not isinstance(detaljer, str):
         detaljer = json.dumps(detaljer, ensure_ascii=False, default=str)
-    session.add(AuditLog(handling=handling, entitet=entitet, entitet_id=str(entitet_id), detaljer=detaljer))
+    from .auth import aktuel_bruger
+    session.add(AuditLog(bruger=aktuel_bruger.get(), handling=handling, entitet=entitet, entitet_id=str(entitet_id), detaljer=detaljer))
 
 
 def naeste_bilagsnr(session: Session) -> int:
@@ -44,6 +45,7 @@ def _kanonisk(entry: JournalEntry, linjer: list[dict]) -> str:
     data = {
         "loebenr": entry.loebenr, "dato": entry.dato.isoformat(), "tekst": entry.tekst, "type": entry.type,
         "bilag_id": entry.bilag_id, "storno_af_id": entry.storno_af_id, "oprettet": entry.oprettet.isoformat(),
+        "oprettet_af": entry.oprettet_af,
         "linjer": [[l["konto"], l["debet"], l["kredit"], l.get("momskode"), l.get("momsgrundlag", 0), l.get("tekst")] for l in linjer],
     }
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -84,7 +86,9 @@ def opret_postering(session: Session, dato: date, tekst: str, linjer: list[dict]
     sidste = session.scalar(select(JournalEntry).order_by(JournalEntry.loebenr.desc()).limit(1))
     entry = JournalEntry(loebenr=naeste_loebenr(session), dato=dato, tekst=tekst.strip(), type=type,
                          bilag_id=bilag.id if bilag else None, storno_af_id=storno_af.id if storno_af else None)
+    from .auth import aktuel_bruger
     entry.oprettet = now()
+    entry.oprettet_af = aktuel_bruger.get()
     entry.forrige_hash = sidste.hash if sidste else ""
     entry.hash = beregn_hash(entry.forrige_hash, _kanonisk(entry, linjer))
     for l in linjer:

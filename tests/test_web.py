@@ -13,8 +13,9 @@ def _png() -> bytes:
     return buf.getvalue()
 
 
-def test_fuldt_flow_uden_api(db):
-    with TestClient(main.app) as c:
+def test_fuldt_flow_uden_api(client):
+    c = client
+    if True:
         assert c.get("/").status_code == 200
         r = c.post("/bilag/upload", files=[("filer", ("kvittering.png", _png(), "image/png"))], data={"kilde": "kamera"}, follow_redirects=False)
         assert r.status_code == 303 and r.headers["location"].startswith("/bilag/1")
@@ -58,9 +59,11 @@ def test_fuldt_flow_uden_api(db):
         assert "besked" in r.headers["location"]
         assert "Afregnet" in c.get("/moms?fra=2026-01-01&til=2026-03-31").text
         assert "intakt" in c.get("/eksport").text
+        assert "erik" in c.get("/posteringer/1").text  # oprettet af
 
 
-def test_afvist_filtype(db):
-    with TestClient(main.app) as c:
+def test_afvist_filtype(client):
+    c = client
+    if True:
         r = c.post("/bilag/upload", files=[("filer", ("virus.exe", b"xx", "application/octet-stream"))], follow_redirects=False)
         assert "fejl" in r.headers["location"]
