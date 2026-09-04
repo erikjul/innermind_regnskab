@@ -8,6 +8,11 @@ momsregnskabet.
 Programmet er bygget til at understøtte kravene i **bogføringsloven** (lov nr. 700 af 24. maj 2022).
 Se afsnittet *Bogføringsloven* nederst for, hvad programmet gør, og hvad du selv skal sørge for.
 
+## Golfturnering
+
+Repoet indeholder også en lille, uafhængig webapp til en golfturnering over tre dage med løbende
+Stableford-stilling og turneringspoint. Se [`golf/README.md`](golf/README.md).
+
 ## Sådan kommer du i gang
 
 Kræver Python 3.11 eller nyere.
