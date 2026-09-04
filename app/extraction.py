@@ -6,46 +6,135 @@ Resultatet er struktureret (JSON-skema), så det kan valideres inden bogføring.
 from __future__ import annotations
 
 import json
-from typing import Literal
+import re
 
 import anthropic
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import config, files
 from .money import til_oere
 
 
+def _tal(v):
+    """Gør '1.234,56', '1234.56', 1234 og None til float/None."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = str(v).strip().replace(" ", "").replace("kr.", "").replace("kr", "")
+    if "," in t and "." in t:
+        t = t.replace(".", "").replace(",", ".") if t.rfind(",") > t.rfind(".") else t.replace(",", "")
+    elif "," in t:
+        t = t.replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
 class Linje(BaseModel):
-    beskrivelse: str
-    beloeb_inkl_moms: float | None = Field(None, description="Linjens beløb inkl. moms i fakturaens valuta")
-    momssats_pct: float | None = Field(None, description="Momssats i procent, fx 25. 0 hvis ingen moms")
+    beskrivelse: str = ""
+    beloeb_inkl_moms: float | None = None
+    momssats_pct: float | None = None
+
+    @field_validator("beloeb_inkl_moms", "momssats_pct", mode="before")
+    @classmethod
+    def _v_tal(cls, v):
+        return _tal(v)
+
+
+DOKUMENTTYPER = ("koebsfaktura", "salgsfaktura", "kvittering", "kreditnota", "andet")
 
 
 class FakturaAflaesning(BaseModel):
-    dokumenttype: Literal["koebsfaktura", "salgsfaktura", "kvittering", "kreditnota", "andet"] = Field(
-        description="Købsfaktura/kvittering = virksomheden har købt noget. Salgsfaktura = virksomheden har solgt noget. "
-                    "Kreditnota = en leverandør krediterer virksomheden.")
-    udsteder_navn: str | None = Field(None, description="Navn på den der har udstedt dokumentet")
-    udsteder_cvr: str | None = Field(None, description="CVR-/momsnummer på udstederen, fx 'DK12345678' eller '12345678'")
-    udsteder_land: str | None = Field(None, description="Udstederens land som ISO 3166-1 alpha-2, fx DK, DE, US")
-    modtager_navn: str | None = Field(None, description="Navn på modtageren/kunden på dokumentet")
+    """Modellens svar. Alle felter er valgfri, så en delvis aflæsning stadig kan bruges."""
+    dokumenttype: str = "koebsfaktura"
+    udsteder_navn: str | None = None
+    udsteder_cvr: str | None = None
+    udsteder_land: str | None = None
+    modtager_navn: str | None = None
     fakturanummer: str | None = None
-    dato: str | None = Field(None, description="Faktura-/kvitteringsdato som YYYY-MM-DD")
-    forfaldsdato: str | None = Field(None, description="Forfaldsdato som YYYY-MM-DD, hvis angivet")
-    valuta: str = Field("DKK", description="ISO 4217, fx DKK, EUR, USD")
-    total_inkl_moms: float | None = Field(None, description="Det samlede beløb inkl. moms (det beløb der skal betales)")
-    momsbeloeb: float | None = Field(None, description="Det samlede momsbeløb på dokumentet, 0 hvis ingen moms")
+    dato: str | None = None
+    forfaldsdato: str | None = None
+    valuta: str = "DKK"
+    total_inkl_moms: float | None = None
+    momsbeloeb: float | None = None
     total_ekskl_moms: float | None = None
-    moms_paa_faktura: bool = Field(description="True hvis der er opkrævet dansk moms på dokumentet")
-    omvendt_betalingspligt: bool = Field(False, description="True hvis dokumentet angiver reverse charge / omvendt betalingspligt eller er en udenlandsk faktura uden moms")
-    betalingsmetode: Literal["kort", "bankoverfoersel", "kontant", "mobilepay", "ukendt"] = "ukendt"
-    er_betalt: bool = Field(description="True hvis dokumentet viser at beløbet allerede er betalt (kvittering, 'betalt', kortbetaling)")
-    beskrivelse: str = Field(description="Kort dansk beskrivelse af købet/salget til posteringsteksten, maks. 80 tegn")
+    moms_paa_faktura: bool = False
+    omvendt_betalingspligt: bool = False
+    betalingsmetode: str = "ukendt"
+    er_betalt: bool = False
+    beskrivelse: str = ""
     linjer: list[Linje] = Field(default_factory=list)
-    foreslaaet_konto: int | None = Field(None, description="Kontonummer fra kontoplanen der passer bedst")
-    foreslaaet_momskode: str | None = Field(None, description="Momskode fra listen der passer bedst")
-    sikkerhed: Literal["hoej", "middel", "lav"] = Field(description="Hvor sikker aflæsningen er (lav ved utydeligt foto)")
-    bemaerkninger: str | None = Field(None, description="Forbehold, fx utydelige tal, manglende felter, flere valutaer")
+    foreslaaet_konto: int | None = None
+    foreslaaet_momskode: str | None = None
+    sikkerhed: str = "middel"
+    bemaerkninger: str | None = None
+
+    @field_validator("total_inkl_moms", "momsbeloeb", "total_ekskl_moms", mode="before")
+    @classmethod
+    def _v_tal(cls, v):
+        return _tal(v)
+
+    @field_validator("foreslaaet_konto", mode="before")
+    @classmethod
+    def _v_konto(cls, v):
+        try:
+            return int(str(v).strip()) if v not in (None, "") else None
+        except ValueError:
+            return None
+
+    @field_validator("udsteder_navn", "udsteder_cvr", "udsteder_land", "modtager_navn", "fakturanummer", "dato",
+                     "forfaldsdato", "foreslaaet_momskode", "bemaerkninger", mode="before")
+    @classmethod
+    def _v_str(cls, v):
+        return None if v is None else str(v).strip() or None
+
+    @field_validator("dokumenttype", mode="before")
+    @classmethod
+    def _v_type(cls, v):
+        v = str(v or "").strip().lower().replace("ø", "oe").replace("å", "aa").replace("æ", "ae")
+        return v if v in DOKUMENTTYPER else "andet"
+
+    @field_validator("sikkerhed", mode="before")
+    @classmethod
+    def _v_sikkerhed(cls, v):
+        v = str(v or "").strip().lower().replace("ø", "oe")
+        return v if v in ("hoej", "middel", "lav") else "middel"
+
+    @field_validator("valuta", "beskrivelse", "betalingsmetode", mode="before")
+    @classmethod
+    def _v_tekst(cls, v):
+        return str(v or "").strip()
+
+
+JSON_FORMAT = """Svar KUN med ét JSON-objekt (ingen forklaring, ingen markdown) med præcis disse felter:
+{
+  "dokumenttype": "koebsfaktura" | "salgsfaktura" | "kvittering" | "kreditnota" | "andet",
+  "udsteder_navn": tekst eller null,
+  "udsteder_cvr": CVR-/momsnummer på udstederen, fx "DK12345678", eller null,
+  "udsteder_land": ISO-landekode med to bogstaver, fx "DK", eller null,
+  "modtager_navn": tekst eller null,
+  "fakturanummer": tekst eller null,
+  "dato": "YYYY-MM-DD" eller null,
+  "forfaldsdato": "YYYY-MM-DD" eller null,
+  "valuta": ISO 4217, fx "DKK",
+  "total_inkl_moms": tal (det beløb der skal betales) eller null,
+  "momsbeloeb": tal, 0 hvis ingen moms, eller null,
+  "total_ekskl_moms": tal eller null,
+  "moms_paa_faktura": true hvis der er opkrævet dansk moms, ellers false,
+  "omvendt_betalingspligt": true ved reverse charge / udenlandsk faktura uden moms, ellers false,
+  "betalingsmetode": "kort" | "bankoverfoersel" | "kontant" | "mobilepay" | "ukendt",
+  "er_betalt": true hvis dokumentet viser at beløbet allerede er betalt (kvittering, kortbetaling), ellers false,
+  "beskrivelse": kort dansk posteringstekst, maks. 80 tegn,
+  "linjer": [ { "beskrivelse": tekst, "beloeb_inkl_moms": tal eller null, "momssats_pct": tal eller null } ],
+  "foreslaaet_konto": kontonummer fra kontoplanen (tal) eller null,
+  "foreslaaet_momskode": momskode fra listen eller null,
+  "sikkerhed": "hoej" | "middel" | "lav",
+  "bemaerkninger": forbehold (utydelige tal, manglende felter) eller null
+}
+Købsfaktura/kvittering = virksomheden har købt noget. Salgsfaktura = virksomheden har solgt noget.
+Kreditnota = en leverandør krediterer virksomheden."""
 
 
 SYSTEM = """Du er en dansk bogholder, der aflæser bilag (fakturaer, kvitteringer, kreditnotaer) for en
@@ -69,6 +158,8 @@ Kontoplan (nummer: navn):
 
 Momskoder (kode: navn):
 {momskoder}
+
+{json_format}
 """
 
 
@@ -88,8 +179,9 @@ def aflaes(indhold: bytes, mime: str, *, firma: str, cvr: str, kontoplan: list[t
         firma=firma or "virksomheden", cvr=cvr or "ukendt",
         kontoplan="\n".join(f"{nr}: {navn}" for nr, navn in kontoplan),
         momskoder="\n".join(f"{k}: {n}" for k, n in momskoder),
+        json_format=JSON_FORMAT,
     )
-    response = client.beta.messages.parse(
+    response = client.beta.messages.create(
         model=config.CLAUDE_MODEL,
         max_tokens=8000,
         betas=["server-side-fallback-2026-07-01"],
@@ -98,15 +190,31 @@ def aflaes(indhold: bytes, mime: str, *, firma: str, cvr: str, kontoplan: list[t
         system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": [
             _indholdsblok(indhold, mime),
-            {"type": "text", "text": "Aflæs dette bilag og udfyld alle felter."},
+            {"type": "text", "text": "Aflæs dette bilag og svar med JSON-objektet."},
         ]}],
-        output_format=FakturaAflaesning,
     )
     if response.stop_reason == "refusal":
         raise RuntimeError("Aflæsningen blev afvist af modellen. Indtast oplysningerne manuelt.")
-    if response.parsed_output is None:
-        raise RuntimeError("Modellen returnerede ikke et gyldigt svar. Prøv igen eller indtast manuelt.")
-    return response.parsed_output
+    tekst = "".join(b.text for b in response.content if getattr(b, "type", "") == "text")
+    return parse_svar(tekst)
+
+
+def parse_svar(tekst: str) -> FakturaAflaesning:
+    """Finder JSON-objektet i modellens svar og validerer det."""
+    t = tekst.strip()
+    t = re.sub(r"^```(?:json)?\s*|\s*```$", "", t, flags=re.IGNORECASE | re.MULTILINE).strip()
+    if not t.startswith("{"):
+        m = re.search(r"\{.*\}", t, flags=re.DOTALL)
+        if not m:
+            raise RuntimeError("Modellen returnerede ikke et gyldigt svar. Prøv igen eller indtast manuelt.")
+        t = m.group(0)
+    try:
+        data = json.loads(t)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Modellens svar kunne ikke læses som JSON: {e}") from e
+    if not isinstance(data, dict):
+        raise RuntimeError("Modellens svar var ikke et JSON-objekt.")
+    return FakturaAflaesning.model_validate(data)
 
 
 def anvend_paa_bilag(v, a: FakturaAflaesning, gyldige_konti: set[int], gyldige_momskoder: set[str]) -> None:

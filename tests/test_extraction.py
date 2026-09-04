@@ -1,4 +1,6 @@
 import io
+
+import pytest
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -8,20 +10,21 @@ from app import extraction, main
 from app.models import Voucher
 
 
-class _FakeParse:
-    """Simulerer client.beta.messages.parse og gemmer det request der blev sendt."""
+class _FakeCreate:
+    """Simulerer client.beta.messages.create og gemmer det request der blev sendt."""
     def __init__(self, svar):
         self.svar = svar
         self.kwargs = None
 
     def __call__(self, **kwargs):
         self.kwargs = kwargs
-        return SimpleNamespace(stop_reason="end_turn", parsed_output=self.svar)
+        tekst = "```json\n" + self.svar.model_dump_json() + "\n```"
+        return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=tekst)])
 
 
 def _fake_client(svar):
-    fp = _FakeParse(svar)
-    return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(parse=fp))), fp
+    fp = _FakeCreate(svar)
+    return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=fp))), fp
 
 
 def _foto() -> bytes:
@@ -46,7 +49,8 @@ def test_aflaes_sender_billede_og_returnerer_struktur():
                           momskoder=[("K25", "Købsmoms")], client=client)
     assert a.total_inkl_moms == 1250.0
     kw = fp.kwargs
-    assert kw["model"] and kw["output_format"] is extraction.FakturaAflaesning
+    assert kw["model"] and "output_format" not in kw and "output_config" in kw
+    assert "Svar KUN med ét JSON-objekt" in kw["system"][0]["text"]
     blok = kw["messages"][0]["content"][0]
     assert blok["type"] == "image" and blok["source"]["media_type"] == "image/jpeg"
     assert "InnerMind" in kw["system"][0]["text"] and "3210: Kontor" in kw["system"][0]["text"]
@@ -85,3 +89,14 @@ def test_web_flow_med_simuleret_aflaesning(db, monkeypatch):
         assert "besked" in r.headers["location"]
         moms = c.get("/moms?fra=2026-01-01&til=2026-03-31").text
         assert "250,00" in moms
+
+
+def test_parse_svar_tolerant():
+    a = extraction.parse_svar('Her er svaret:\n{"dokumenttype": "Købsfaktura", "total_inkl_moms": "3.750,00", "dato": "2026-08-18", '
+                              '"foreslaaet_konto": "2050", "sikkerhed": "HØJ", "linjer": [{"beskrivelse": "x", "beloeb_inkl_moms": "3.750,00"}]}')
+    assert a.dokumenttype == "koebsfaktura" and a.total_inkl_moms == 3750.0 and a.foreslaaet_konto == 2050
+    assert a.sikkerhed == "hoej" and a.linjer[0].beloeb_inkl_moms == 3750.0
+    b = extraction.parse_svar('{"dokumenttype": "koebsfaktura", "sikkerhed": "hoej", "moms_paa_faktura": true}')
+    assert b.dokumenttype == "koebsfaktura" and b.sikkerhed == "hoej" and b.total_inkl_moms is None
+    with pytest.raises(RuntimeError):
+        extraction.parse_svar("Jeg kan desværre ikke læse billedet.")
