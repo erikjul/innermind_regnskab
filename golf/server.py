@@ -30,13 +30,37 @@ PIN = os.environ.get("GOLF_PIN", "").strip()
 
 ANTAL_RUNDER = 3
 
-# Standardbane: Samsø Golfklub, 18 hullers bane, tee 56 (herrer): par 72, CR 70,8, slope 131 (DGU's
-# course handicap table). Par og handicapnøgle pr. hul nedenfor er en generisk par 72-fordeling og
-# skal rettes efter klubbens scorekort under Opsætning.
+# Standardbane: Samsø Golfklub, 18 hullers bane. Par, handicapnøgle (index) og længder pr. hul er
+# fra klubbens baneguide; CR 70,8 og slope 131 for tee 56 (herrer) er fra DGU's course handicap
+# table. Tee 49 og 61 har kendte længder, men CR og slope skal hentes fra klubbens konverteringstabel,
+# så de tilføjes under Opsætning (længderne udfyldes så automatisk).
 STANDARD_COURSE = "Samsø Golfklub"
-STANDARD_TEES = [{"name": "56", "cr": 70.8, "slope": 131}]
-STANDARD_PAR = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 5, 3, 4, 4]
-STANDARD_SI = [7, 3, 15, 11, 1, 13, 17, 9, 5, 8, 12, 18, 2, 14, 10, 16, 4, 6]
+STANDARD_PAR = [4, 4, 5, 3, 4, 4, 4, 3, 5, 5, 3, 4, 4, 5, 3, 4, 4, 4]
+STANDARD_SI = [13, 9, 3, 15, 1, 11, 7, 17, 5, 2, 16, 6, 12, 8, 18, 10, 4, 14]
+SAMSOE_LAENGDER = {
+    "49": [265, 310, 395, 120, 305, 280, 275, 125, 385, 385, 115, 280, 275, 390, 120, 300, 315, 245],
+    "56": [320, 350, 445, 140, 345, 320, 320, 150, 435, 435, 130, 325, 330, 435, 145, 345, 360, 285],
+    "61": [336, 380, 485, 173, 345, 346, 320, 172, 438, 452, 149, 359, 330, 512, 172, 416, 370, 340],
+}
+STANDARD_TEES = [{"name": "56", "cr": 70.8, "slope": 131, "lengths": list(SAMSOE_LAENGDER["56"])}]
+STANDARD_REGLER = """## Lokalregler (Samsø Golfklub)
+Banemarkeringer: hvide = out of bounds, røde = strafområde, blå = areal under reparation, grøn top = spilleforbud.
+1. Out of bounds defineres som linjen mellem de banenære punkter af hvide pæle i jordhøjde.
+2. Alle veje og stier på banen, også kunstigt overfladebelagte, behandles som integrerede genstande.
+3. Alle pæle på banen behandles som ikke-flytbare forhindringer: lempelse uden straf efter Regel 16.1. Lempelse må ikke tages efter Regel 15.2.
+4. Provisorisk bold ved bold i strafområde på hul 5, 7, 11, 14 og 17: Ved du ikke, om bolden er i strafområdet, kan du spille en provisorisk bold efter Regel 18.3. Findes den oprindelige bold i strafområdet inden for 3 minutter, vælger du enten at spille den, som den ligger (den provisoriske bold opgives, og slag med den tæller ikke), eller at fortsætte med den provisoriske bold. Findes den ikke, eller er det så godt som sikkert, at den er i strafområdet, er den provisoriske bold i spil. Straf for overtrædelse: den generelle straf.
+5. Elhegn og installationer omkring fårefolde er ikke-flytbare forhindringer. Generer de sving eller stance, kan der tages lempelse uden straf efter Regel 16.1a.
+6. Fåreindhegninger er områder med spilleforbud (unormalt baneforhold). Lempelse uden straf skal tages efter Regel 16.1f. Straf for overtrædelse: hulspil tab af hul, slagspil 2 strafslag.
+## Ordensregler
+Afstandspæle i siden af fairway: gule 150 m, røde 100 m, blå 50 m til forkant af green.
+Bolde slået out of bounds må ikke afhentes på nabojord.
+Hul 1 og 18: slå ikke ud, før forangående bold er på green.
+Hul 13: slå ikke ud, før du har hørt klokken.
+Hul 4 og 8: slå ikke ud, hvis der er færdsel på vejen.
+Hul 7, tee 56: slå ikke ud, hvis der er spillere på hul 18 på tee 61 eller 56.
+Max 4-bold. En runde bør højst tage 4 timer og 30 minutter. Luk hurtigere spillere igennem.
+Ret nedslagsmærker på green, læg tørv på plads, og læg hele riven ned i bunkeren.
+Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klubhusets dør. Shoppen: 86 59 22 18."""
 RUNDER = [
     ("2026-09-18", "Fredag"),
     ("2026-09-19", "Lørdag"),
@@ -50,6 +74,7 @@ def standard_state() -> dict[str, Any]:
         "settings": {
             "name": "Golfturnering 2026",
             "allowance": 100,
+            "rules": STANDARD_REGLER,
             "rounds": [
                 {
                     "date": d,
@@ -90,6 +115,7 @@ class Lager:
             s = state.setdefault("settings", grund["settings"])
             s.setdefault("name", grund["settings"]["name"])
             s.setdefault("allowance", 100)
+            s.setdefault("rules", STANDARD_REGLER)
             runder = s.setdefault("rounds", [])
             while len(runder) < ANTAL_RUNDER:
                 runder.append(grund["settings"]["rounds"][len(runder)])
@@ -175,6 +201,7 @@ class Tee(BaseModel):
     name: str = Field(min_length=1, max_length=30)
     cr: float = Field(ge=40, le=90)
     slope: int = Field(ge=55, le=155)
+    lengths: list[int] | None = None  # meter pr. hul, valgfrit
 
 
 class Runde(BaseModel):
@@ -191,6 +218,7 @@ class Opsaetning(BaseModel):
     name: str
     allowance: int = Field(ge=50, le=100)
     rounds: list[Runde]
+    rules: str = Field(default="", max_length=20000)
 
 
 # ---------- sider ----------
@@ -303,10 +331,14 @@ def gem_opsaetning(data: Opsaetning, x_golf_pin: str | None = Header(default=Non
         navne = [t.name.strip().casefold() for t in rd.tees]
         if len(set(navne)) != len(navne):
             raise HTTPException(422, "To tees på samme runde kan ikke have samme navn")
+        for t in rd.tees:
+            if t.lengths is not None and (len(t.lengths) != 18 or any(not 0 <= x <= 999 for x in t.lengths)):
+                raise HTTPException(422, f"Længder for tee {t.name} skal være 18 tal i meter")
     with lager.lock:
         lager.state["settings"] = {
             "name": rens_navn(data.name),
             "allowance": data.allowance,
+            "rules": data.rules,
             "rounds": [rd.model_dump() for rd in data.rounds],
         }
         lager.gem()

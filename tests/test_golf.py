@@ -37,7 +37,14 @@ def test_forside_og_state(client):
     assert len(st["settings"]["rounds"]) == 3
     assert st["settings"]["rounds"][0]["date"] == "2026-09-18"
     assert st["settings"]["rounds"][0]["course"] == "Samsø Golfklub"
-    assert st["settings"]["rounds"][0]["tees"] == [{"name": "56", "cr": 70.8, "slope": 131}]
+    r0 = st["settings"]["rounds"][0]
+    assert r0["tees"][0]["name"] == "56" and r0["tees"][0]["cr"] == 70.8 and r0["tees"][0]["slope"] == 131
+    # Fra baneguiden: par 72 med 36 ud og 36 ind, handicapnøgle 1 på hul 5, 18 på hul 15
+    assert r0["par"] == [4, 4, 5, 3, 4, 4, 4, 3, 5, 5, 3, 4, 4, 5, 3, 4, 4, 4]
+    assert r0["si"] == [13, 9, 3, 15, 1, 11, 7, 17, 5, 2, 16, 6, 12, 8, 18, 10, 4, 14]
+    assert sorted(r0["si"]) == list(range(1, 19))
+    assert r0["tees"][0]["lengths"][0] == 320 and sum(r0["tees"][0]["lengths"]) == 5615
+    assert "Lokalregler" in st["settings"]["rules"]
     assert st["pinRequired"] is True
     assert client.get("/api/state", params={"since": st["version"]}).json()["unchanged"] is True
 
@@ -107,7 +114,12 @@ def test_opsaetning_valideres(client):
     assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
     st["rounds"][0]["tees"] = []
     assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
-    st["rounds"][0]["tees"] = [{"name": "Gul", "cr": 71.3, "slope": 128}]
+    st["rounds"][0]["tees"] = [{"name": "Gul", "cr": 71.3, "slope": 128, "lengths": [300] * 17}]
+    assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
+    st["rounds"][0]["tees"] = [{"name": "Gul", "cr": 71.3, "slope": 128, "lengths": [300] * 18}]
+    st["rules"] = "## Test\nEn regel."
+    assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 200
+    assert client.get("/api/state").json()["settings"]["rules"] == "## Test\nEn regel."
 
     st["rounds"][1]["si"][1] = 7  # nøgle brugt to gange
     assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422

@@ -82,7 +82,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 main { max-width: 760px; margin: 0 auto; padding: 14px 14px 100px; display: grid; gap: 14px; }
 
 /* View switcher */
-.views { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; }
+.views { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; }
 .views button {
   border: 0; background: transparent; padding: 9px 4px; border-radius: 9px; font-weight: 600; color: var(--muted);
 }
@@ -99,9 +99,13 @@ main { max-width: 760px; margin: 0 auto; padding: 14px 14px 100px; display: grid
 
 /* Forms */
 label.f { display: grid; gap: 4px; font-size: 13.5px; font-weight: 500; color: var(--muted); }
-input[type=text], input[type=number], input[type=password], input[type=date], select {
+input[type=text], input[type=number], input[type=password], input[type=date], select, textarea {
   width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ground); color: var(--ink);
 }
+textarea { resize: vertical; line-height: 1.4; font-size: 14px; }
+.rules h3 { font-size: 18px; margin: 14px 0 4px; }
+.rules p { margin: 4px 0; font-size: 14.5px; }
+.rules p.n { padding-left: 1.4em; text-indent: -1.4em; }
 input[type=number] { font-variant-numeric: tabular-nums; }
 .btn {
   border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 600; background: var(--accent); color: var(--accent-ink);
@@ -254,11 +258,13 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     <button role="tab" data-view="score" aria-selected="true">Scorekort</button>
     <button role="tab" data-view="board" aria-selected="false">Stilling</button>
     <button role="tab" data-view="overall" aria-selected="false">Samlet</button>
+    <button role="tab" data-view="course" aria-selected="false">Banen</button>
   </div>
 
   <section id="view-score"></section>
   <section id="view-board" class="hidden"></section>
   <section id="view-overall" class="hidden"></section>
+  <section id="view-course" class="hidden"></section>
   <section id="view-settings" class="hidden"></section>
 </main>
 
@@ -287,6 +293,36 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ingen lagring */ } },
+  };
+
+  // Samsø Golfklub, 18 hullers bane, fra klubbens baneguide. Bruges til prøveversionen og til at
+  // udfylde længder automatisk, når et tee med navnet 49, 56 eller 61 tilføjes under Opsætning.
+  const SAMSOE = {
+    par: [4, 4, 5, 3, 4, 4, 4, 3, 5, 5, 3, 4, 4, 5, 3, 4, 4, 4],
+    si: [13, 9, 3, 15, 1, 11, 7, 17, 5, 2, 16, 6, 12, 8, 18, 10, 4, 14],
+    lengths: {
+      "49": [265, 310, 395, 120, 305, 280, 275, 125, 385, 385, 115, 280, 275, 390, 120, 300, 315, 245],
+      "56": [320, 350, 445, 140, 345, 320, 320, 150, 435, 435, 130, 325, 330, 435, 145, 345, 360, 285],
+      "61": [336, 380, 485, 173, 345, 346, 320, 172, 438, 452, 149, 359, 330, 512, 172, 416, 370, 340],
+    },
+    rules: `## Lokalregler (Samsø Golfklub)
+Banemarkeringer: hvide = out of bounds, røde = strafområde, blå = areal under reparation, grøn top = spilleforbud.
+1. Out of bounds defineres som linjen mellem de banenære punkter af hvide pæle i jordhøjde.
+2. Alle veje og stier på banen, også kunstigt overfladebelagte, behandles som integrerede genstande.
+3. Alle pæle på banen behandles som ikke-flytbare forhindringer: lempelse uden straf efter Regel 16.1. Lempelse må ikke tages efter Regel 15.2.
+4. Provisorisk bold ved bold i strafområde på hul 5, 7, 11, 14 og 17: Ved du ikke, om bolden er i strafområdet, kan du spille en provisorisk bold efter Regel 18.3. Findes den oprindelige bold i strafområdet inden for 3 minutter, vælger du enten at spille den, som den ligger (den provisoriske bold opgives, og slag med den tæller ikke), eller at fortsætte med den provisoriske bold. Findes den ikke, eller er det så godt som sikkert, at den er i strafområdet, er den provisoriske bold i spil. Straf for overtrædelse: den generelle straf.
+5. Elhegn og installationer omkring fårefolde er ikke-flytbare forhindringer. Generer de sving eller stance, kan der tages lempelse uden straf efter Regel 16.1a.
+6. Fåreindhegninger er områder med spilleforbud (unormalt baneforhold). Lempelse uden straf skal tages efter Regel 16.1f. Straf for overtrædelse: hulspil tab af hul, slagspil 2 strafslag.
+## Ordensregler
+Afstandspæle i siden af fairway: gule 150 m, røde 100 m, blå 50 m til forkant af green.
+Bolde slået out of bounds må ikke afhentes på nabojord.
+Hul 1 og 18: slå ikke ud, før forangående bold er på green.
+Hul 13: slå ikke ud, før du har hørt klokken.
+Hul 4 og 8: slå ikke ud, hvis der er færdsel på vejen.
+Hul 7, tee 56: slå ikke ud, hvis der er spillere på hul 18 på tee 61 eller 56.
+Max 4-bold. En runde bør højst tage 4 timer og 30 minutter. Luk hurtigere spillere igennem.
+Ret nedslagsmærker på green, læg tørv på plads, og læg hele riven ned i bunkeren.
+Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klubhusets dør. Shoppen: 86 59 22 18.`,
   };
 
   function restApi() {
@@ -318,15 +354,14 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 
   function localApi() {
     // Samme snitflade som serveren, men alt ligger i localStorage (kun til at prøve appen af).
-    const PAR = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 5, 3, 4, 4];
-    const SI = [7, 3, 15, 11, 1, 13, 17, 9, 5, 8, 12, 18, 2, 14, 10, 16, 4, 6];
+    const PAR = SAMSOE.par, SI = SAMSOE.si;
     function fresh() {
       return {
         version: 1,
         settings: {
-          name: "Golfturnering 2026", allowance: 100,
+          name: "Golfturnering 2026", allowance: 100, rules: SAMSOE.rules,
           rounds: [["2026-09-18", "Fredag"], ["2026-09-19", "Lørdag"], ["2026-09-20", "Søndag"]].map(([date, label]) => ({
-            date, label, course: "Samsø Golfklub", tees: [{ name: "56", cr: 70.8, slope: 131 }], par: PAR.slice(), si: SI.slice(), closed: false,
+            date, label, course: "Samsø Golfklub", tees: [{ name: "56", cr: 70.8, slope: 131, lengths: SAMSOE.lengths["56"].slice() }], par: PAR.slice(), si: SI.slice(), closed: false,
           })),
         },
         players: [], scores: { 0: {}, 1: {}, 2: {} },
@@ -446,10 +481,11 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     renderMe();
     document.querySelectorAll("#views button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === view)));
     $("#views").classList.toggle("hidden", view === "settings");
-    ["score", "board", "overall", "settings"].forEach((v) => $("#view-" + v).classList.toggle("hidden", v !== view));
+    ["score", "board", "overall", "course", "settings"].forEach((v) => $("#view-" + v).classList.toggle("hidden", v !== view));
     if (view === "score") renderScore();
     if (view === "board") renderBoard();
     if (view === "overall") renderOverall();
+    if (view === "course") renderCourse();
     if (view === "settings") renderSettings();
     if (sheetHole) renderSheet();
   }
@@ -548,6 +584,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     if (!m) { el.innerHTML = `<div class="card empty">Vælg dit navn eller tilmeld dig ovenfor for at taste din score.</div>`; return; }
     if (m.absent && m.absent[round]) { el.innerHTML = `<div class="card empty">Du er sat til ikke at spille ${esc(dayLabel(c).toLowerCase())}. Tryk <b>Ret</b> ovenfor for at ændre det.</div>`; return; }
     const card = S.scorecard(m, c, scoresOf(round)[m.id], state.settings.allowance);
+    const lengths = teeLengths(c, m.tee);
     const st = standings(round);
     const myRow = st.rows.find((r) => r.id === m.id);
     const nextHole = card.holes.find((h) => h.strokes == null);
@@ -568,7 +605,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       </div>
       <div class="holes">
         <div class="subtotal"><span>Hul · par · nøgle · slag du får</span><span>Slag</span><span>Point</span></div>
-        ${card.holes.map((h) => holeRow(h, nextHole && h.hole === nextHole.hole, c.closed)).join("")}
+        ${card.holes.map((h, i) => holeRow(h, nextHole && h.hole === nextHole.hole, c.closed, lengths ? lengths[i] : null)).join("")}
         <div class="subtotal num"><span>Total · spillehandicap ${card.playingHcp}</span><span>${card.holes.reduce((s, h) => s + (h.strokes || 0), 0) || ""}</span><span><b>${card.total}</b></span></div>
       </div>
     </div>`);
@@ -578,14 +615,15 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     el.querySelectorAll(".hole").forEach((b) => (b.onclick = () => { if (!c.closed) openSheet(+b.dataset.hole); }));
   }
 
-  function holeRow(h, isNext, closed) {
+  const teeLengths = (course, teeName) => { const t = S.teeFor(course, teeName); return t.lengths && t.lengths.length === 18 ? t.lengths : null; };
+  function holeRow(h, isNext, closed, length) {
     const dots = h.received > 0 ? "●".repeat(Math.min(h.received, 3)) + (h.received > 3 ? "+" : "") : h.received < 0 ? "−" + (-h.received) : "";
     const strokesTxt = h.strokes == null ? "·" : h.strokes === 0 ? "streg" : h.strokes;
     const ptsCls = h.points == null ? "" : h.points === 0 ? "p0" : h.points >= 5 ? "p5" : h.points === 4 ? "p4" : h.points === 3 ? "p3" : "";
     const split = h.hole === 10 ? " split" : "";
     return `<button class="hole${isNext ? " next" : ""}${split}" data-hole="${h.hole}" ${closed ? "disabled" : ""}>
       <span class="h num">${h.hole}</span>
-      <span class="meta">Par ${h.par} · nøgle ${h.si} <span class="dots">${dots}</span></span>
+      <span class="meta">Par ${h.par} · nøgle ${h.si}${length ? " · " + length + " m" : ""} <span class="dots">${dots}</span></span>
       <span class="strokes num ${h.strokes == null ? "empty" : ""}" style="${h.strokes === 0 ? "font-size:14px;color:var(--flag)" : ""}">${strokesTxt}</span>
       <span class="pts num ${ptsCls}">${h.points == null ? "" : h.points}</span>
     </button>`;
@@ -656,6 +694,30 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     el.innerHTML = parts.join("");
   }
 
+  // ---------- banen ----------
+  function renderCourse() {
+    const el = $("#view-course");
+    const c = courseOf(round);
+    const tees = (c.tees || []).filter((t) => t.lengths && t.lengths.length === 18);
+    const totalPar = c.par.reduce((a, b) => a + b, 0);
+    const sum = (arr, from, to) => arr.slice(from, to).reduce((a, b) => a + b, 0);
+    const row = (i) => `<tr><td class="rank num">${i + 1}</td><td class="c num">${c.par[i]}</td><td class="c num">${c.si[i]}</td>${tees.map((t) => `<td class="r num">${t.lengths[i]}</td>`).join("")}</tr>`;
+    const sumRow = (label, from, to) => `<tr><td><b>${label}</b></td><td class="c num"><b>${sum(c.par, from, to)}</b></td><td></td>${tees.map((t) => `<td class="r num"><b>${sum(t.lengths, from, to)}</b></td>`).join("")}</tr>`;
+    const rules = (state.settings.rules || "").split("\n").map((l) => l.trim()).filter(Boolean)
+      .map((l) => l.startsWith("## ") ? `<h3>${esc(l.slice(3))}</h3>` : `<p class="${/^\d+\./.test(l) ? "n" : ""}">${esc(l)}</p>`).join("");
+    el.innerHTML = `
+      <div class="card">
+        <h2>${esc(c.course || "Banen")}</h2>
+        <div class="muted num">Par ${totalPar} · ${(c.tees || []).map((t) => "tee " + esc(t.name) + ": CR " + String(t.cr).replace(".", ",") + " / slope " + t.slope).join(" · ")}</div>
+        <div class="tbl-wrap" style="margin-top:10px"><table>
+          <thead><tr><th>Hul</th><th class="c">Par</th><th class="c">Nøgle</th>${tees.map((t) => `<th class="r">Tee ${esc(t.name)}</th>`).join("")}</tr></thead>
+          <tbody>${Array.from({ length: 9 }, (_, i) => row(i)).join("")}${sumRow("Ud", 0, 9)}${Array.from({ length: 9 }, (_, i) => row(i + 9)).join("")}${sumRow("Ind", 9, 18)}${sumRow("I alt", 0, 18)}</tbody>
+        </table></div>
+        ${tees.length ? '<p class="muted" style="font-size:13px">Længder i meter fra klubbens baneguide.</p>' : ""}
+      </div>
+      ${rules ? `<div class="card rules">${rules}</div>` : ""}`;
+  }
+
   // ---------- opsætning ----------
   function renderSettings() {
     const el = $("#view-settings");
@@ -669,6 +731,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         <label class="f">Turneringens navn<input type="text" id="s-name" value="${esc(d.name)}" maxlength="60"></label>
         <label class="f">Handicaptildeling (DGU anbefaler 95 % til individuel Stableford; mange private turneringer bruger 100 %)
           <select id="s-allowance"><option value="100" ${d.allowance === 100 ? "selected" : ""}>100 %</option><option value="95" ${d.allowance === 95 ? "selected" : ""}>95 %</option><option value="90" ${d.allowance === 90 ? "selected" : ""}>90 %</option></select></label>
+        <label class="f">Lokalregler og ordensregler (vises under fanen Banen; en linje, der begynder med ##, bliver en overskrift)<textarea id="s-rules" rows="7">${esc(d.rules || "")}</textarea></label>
         ${d.rounds.map((r, i) => `<div class="round-set">
           <div class="row"><b class="grow">Runde ${i + 1}</b>
             ${i === 0 ? `<button class="btn secondary small" id="btn-copy">Kopiér bane til alle runder</button>` : ""}
@@ -684,7 +747,10 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
             <label class="f">Course rating<input type="text" inputmode="decimal" data-r="${i}" data-tee="${k}" data-k="cr" value="${String(t.cr).replace(".", ",")}"></label>
             <label class="f">Slope<input type="number" data-r="${i}" data-tee="${k}" data-k="slope" value="${t.slope}" min="55" max="155"></label>
             <label class="f">&nbsp;<button class="btn secondary small" type="button" data-deltee="${i}:${k}" ${r.tees.length < 2 ? "disabled" : ""}>Fjern tee</button></label>
-          </div>`).join("")}
+          </div>
+          <details><summary class="muted" style="font-size:13px">Længder pr. hul for tee ${esc(t.name)} (meter, valgfrit)</summary>
+            <div class="grid18">${Array.from({ length: 18 }, (_, h) => `<div><div class="lab">${h + 1}</div><input type="number" min="0" max="999" data-r="${i}" data-tee="${k}" data-len="${h}" value="${t.lengths && t.lengths.length === 18 ? t.lengths[h] : ""}"></div>`).join("")}</div>
+          </details>`).join("")}
           <div><button class="btn secondary small" type="button" data-addtee="${i}">+ Tilføj tee (fx 49 til damer)</button></div>
           <div class="eyebrow">Par pr. hul</div>
           <div class="grid18">${r.par.map((p, h) => `<div><div class="lab">${h + 1}</div><input type="number" min="3" max="6" data-r="${i}" data-arr="par" data-h="${h}" value="${p}"></div>`).join("")}</div>
@@ -709,9 +775,19 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       if (inp.dataset.arr) { d.rounds[i][inp.dataset.arr][+inp.dataset.h] = parseInt(inp.value, 10) || 0; }
       else if (inp.dataset.tee != null) {
         const t = d.rounds[i].tees[+inp.dataset.tee];
-        if (inp.dataset.k === "cr") t.cr = parseNum(inp.value);
+        if (inp.dataset.len != null) {
+          if (!t.lengths || t.lengths.length !== 18) t.lengths = Array(18).fill(0);
+          t.lengths[+inp.dataset.len] = parseInt(inp.value, 10) || 0;
+          if (t.lengths.every((x) => !x)) t.lengths = null;
+        }
+        else if (inp.dataset.k === "cr") t.cr = parseNum(inp.value);
         else if (inp.dataset.k === "slope") t.slope = parseInt(inp.value, 10) || 113;
-        else t.name = inp.value;
+        else {
+          t.name = inp.value;
+          // Samsø: længderne kendes for tee 49, 56 og 61
+          const known = /samsø/i.test(d.rounds[i].course) && SAMSOE.lengths[t.name.trim()];
+          if (known && !(t.lengths && t.lengths.some((x) => x))) t.lengths = known.slice();
+        }
       }
       else d.rounds[i][inp.dataset.k] = inp.value;
       d.rounds[i].label = dayLabel(d.rounds[i]);
@@ -719,6 +795,8 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     el.querySelectorAll("[data-addtee]").forEach((b) => (b.onclick = () => { d.rounds[+b.dataset.addtee].tees.push({ name: "", cr: 72, slope: 113 }); render(); }));
     el.querySelectorAll("[data-deltee]").forEach((b) => (b.onclick = () => { const [i, k] = b.dataset.deltee.split(":").map(Number); d.rounds[i].tees.splice(k, 1); render(); }));
     el.querySelectorAll("input[data-r]").forEach((inp) => (inp.oninput = () => bind(inp)));
+    el.querySelectorAll("input[data-tee][data-k=name]").forEach((inp) => (inp.onchange = () => render()));
+    $("#s-rules").oninput = (e) => (d.rules = e.target.value);
     $("#s-name").oninput = (e) => (d.name = e.target.value);
     $("#s-allowance").onchange = (e) => (d.allowance = parseInt(e.target.value, 10));
     const pin = $("#pin"); if (pin) pin.oninput = () => ls.set("golf.pin", pin.value);
@@ -740,6 +818,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
           if (!t.name.trim()) return toast("Giv hvert tee et navn, fx 56");
           if (!(t.cr >= 40 && t.cr <= 90)) return toast("Course rating for tee " + t.name + " ser forkert ud");
           if (!(t.slope >= 55 && t.slope <= 155)) return toast("Slope for tee " + t.name + " ser forkert ud");
+          if (t.lengths && (t.lengths.length !== 18 || t.lengths.some((x) => x < 0 || x > 999))) return toast("Længderne for tee " + t.name + " skal være 18 tal i meter");
         }
       }
       guarded(async () => { await api.saveSettings(d); settingsDraft = null; toast("Opsætningen er gemt"); });
@@ -776,7 +855,8 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     const h = card.holes[sheetHole - 1];
     $("#sheet-title").textContent = "Hul " + h.hole + " · par " + h.par;
     const recv = h.received === 0 ? "ingen ekstra slag" : h.received === 1 ? "du får 1 slag" : h.received > 0 ? "du får " + h.received + " slag" : "du afgiver " + -h.received + " slag";
-    $("#sheet-info").textContent = "Handicapnøgle " + h.si + " · " + recv + " · netpar " + (h.par + h.received) + (h.strokes != null ? " · nu: " + (h.strokes === 0 ? "streg" : h.strokes + " slag, " + h.points + " point") : "");
+    const lens = teeLengths(c, m.tee);
+    $("#sheet-info").textContent = (lens ? lens[h.hole - 1] + " m · " : "") + "Handicapnøgle " + h.si + " · " + recv + " · netpar " + (h.par + h.received) + (h.strokes != null ? " · nu: " + (h.strokes === 0 ? "streg" : h.strokes + " slag, " + h.points + " point") : "");
     const pad = $("#pad");
     let html = "";
     for (let n = 1; n <= 12; n++) html += `<button data-n="${n}" class="num ${n === h.par ? "par" : ""} ${h.strokes === n ? "cur" : ""}" aria-label="${n} slag">${n}</button>`;

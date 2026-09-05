@@ -20,16 +20,24 @@ Alle, der har adressen, kan åbne den på telefonen, tilmelde sig og taste slag 
   vinderen altså 20, nr. 2 får 17 og nr. 18 får 1.
 * **Samlet:** turneringspoint lagt sammen over de tre runder. Ved lighed tæller flest
   Stablefordpoint i alt, derefter laveste HCP-index.
+* **Banen:** huloversigt med par, handicapnøgle og længder pr. tee samt klubbens lokalregler og
+  ordensregler (teksten kan rettes under Opsætning).
 * **Opsætning (tandhjulet):** turneringens navn, bane, ét eller flere tees med course rating og
   slope, par og handicapnøgle pr. hul for hver runde (*Kopiér bane til alle runder* sparer tid),
   *Luk runden nu* hvis nogen aldrig får tastet færdig, og sletning af spillere. Sæt en PIN i `.env`
   (`GOLF_PIN`), så kun du kan gøre de ting – tilmelding og scoreindtastning kræver aldrig PIN.
 
-Standardopsætningen er **Samsø Golfklub, 18 hullers bane, tee 56 (herrer): par 72, course rating
-70,8, slope 131**. Par og handicapnøgle pr. hul er derimod en generisk par 72-fordeling, så inden
-turneringen skal du under Opsætning taste par og nøgle for hvert hul fra klubbens scorekort og trykke
-*Kopiér bane til alle runder*. Spiller nogen fra tee 49 eller 61, tilføjer du dem som tees med
-tallene fra klubbens konverteringstabel, og spillerne vælger så selv tee ved tilmelding.
+Standardopsætningen er **Samsø Golfklub, 18 hullers bane** med par, handicapnøgle og længder pr. hul
+fra klubbens baneguide og lokalreglerne fra samme. Tee 56 (herrer) er sat op med course rating 70,8
+og slope 131 fra DGU's course handicap table. Spiller nogen fra tee 49 eller 61, tilføjer du dem
+under Opsætning med course rating og slope fra klubbens konverteringstabel; længderne udfyldes
+automatisk, og spillerne vælger så selv tee ved tilmelding. Husk *Kopiér bane til alle runder*.
+
+| Hul | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Par | 4 | 4 | 5 | 3 | 4 | 4 | 4 | 3 | 5 | 5 | 3 | 4 | 4 | 5 | 3 | 4 | 4 | 4 |
+| Nøgle | 13 | 9 | 3 | 15 | 1 | 11 | 7 | 17 | 5 | 2 | 16 | 6 | 12 | 8 | 18 | 10 | 4 | 14 |
+| Tee 56 (m) | 320 | 350 | 445 | 140 | 345 | 320 | 320 | 150 | 435 | 435 | 130 | 325 | 330 | 435 | 145 | 345 | 360 | 285 |
 
 ## Prøv den på din egen pc
 
