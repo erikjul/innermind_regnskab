@@ -140,7 +140,7 @@ input[type=number] { font-variant-numeric: tabular-nums; }
 .hole.next { border-color: var(--accent); background: var(--accent-soft); }
 .hole .h { font-family: var(--display); font-size: 22px; font-weight: 700; }
 .hole .meta { font-size: 13px; color: var(--muted); }
-.hole .dots { color: var(--accent); letter-spacing: 1px; font-size: 12px; }
+.hole .dots { color: var(--accent); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .hole .strokes, .hole .pts { font-family: var(--display); font-size: 22px; font-weight: 700; text-align: center; }
 .hole .strokes.empty { color: var(--line); }
 .hole .pts { border-radius: 8px; padding: 2px 0; }
@@ -589,7 +589,6 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
     const myRow = st.rows.find((r) => r.id === m.id);
     const nextHole = card.holes.find((h) => h.strokes == null);
     const totalPar = c.par.reduce((a, b) => a + b, 0);
-    const toPar = card.holes.filter((h) => h.strokes != null && h.strokes > 0).reduce((s, h) => s + h.strokes - h.par, 0);
     const parts = [];
     parts.push(`<div class="card" style="display:grid;gap:12px">
       <div class="row">
@@ -599,12 +598,12 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
       </div>
       <div class="summary num">
         <div><div class="v">${card.total}</div><div class="k">Point</div></div>
-        <div><div class="v">${card.played ? fmtSigned(toPar) : "–"}</div><div class="k">Til par</div></div>
+        <div><div class="v">${nextHole ? fmtSigned(nextHole.received) : card.playingHcp}</div><div class="k">${nextHole ? "Ekstra slag hul " + nextHole.hole : "Slag i alt"}</div></div>
         <div><div class="v">${card.played === 18 ? "F" : card.played}</div><div class="k">Huller</div></div>
         <div><div class="v">${myRow ? myRow.rank + "." : "–"}</div><div class="k">Placering</div></div>
       </div>
       <div class="holes">
-        <div class="subtotal"><span>Hul · par · nøgle · slag du får</span><span>Slag</span><span>Point</span></div>
+        <div class="subtotal"><span>Hul · par · nøgle · længde · ekstra slag</span><span>Slag</span><span>Point</span></div>
         ${card.holes.map((h, i) => holeRow(h, nextHole && h.hole === nextHole.hole, c.closed, lengths ? lengths[i] : null)).join("")}
         <div class="subtotal num"><span>Total · spillehandicap ${card.playingHcp}</span><span>${card.holes.reduce((s, h) => s + (h.strokes || 0), 0) || ""}</span><span><b>${card.total}</b></span></div>
       </div>
@@ -617,7 +616,7 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
 
   const teeLengths = (course, teeName) => { const t = S.teeFor(course, teeName); return t.lengths && t.lengths.length === 18 ? t.lengths : null; };
   function holeRow(h, isNext, closed, length) {
-    const dots = h.received > 0 ? "●".repeat(Math.min(h.received, 3)) + (h.received > 3 ? "+" : "") : h.received < 0 ? "−" + (-h.received) : "";
+    const dots = h.received > 0 ? "+" + h.received + " slag" : h.received < 0 ? "−" + (-h.received) + " slag" : "";
     const strokesTxt = h.strokes == null ? "·" : h.strokes === 0 ? "streg" : h.strokes;
     const ptsCls = h.points == null ? "" : h.points === 0 ? "p0" : h.points >= 5 ? "p5" : h.points === 4 ? "p4" : h.points === 3 ? "p3" : "";
     const split = h.hole === 10 ? " split" : "";
