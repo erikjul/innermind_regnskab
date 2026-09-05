@@ -68,7 +68,7 @@ serverens IP via sslip.io.
 
    ```bash
    cd /opt
-   git clone https://github.com/erikjul/innermind_regnskab.git
+   git clone -b claude/golf-tournament-webapp-d1pvkv https://github.com/erikjul/innermind_regnskab.git
    cd innermind_regnskab/golf
    cp .env.example .env
    nano .env
