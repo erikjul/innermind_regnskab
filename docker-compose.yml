@@ -1,5 +1,5 @@
 # Produktion: regnskabsprogram + daglig backup. HTTPS og adresse styres af den fælles Caddy i
-# proxy/ (netværket "web"), så flere apps kan dele serveren.
+# repoet server-proxy (netværket "web"), så flere apps kan dele serveren.
 # Kopiér .env.example til .env og udfyld ANTHROPIC_API_KEY og REGNSKAB_SESSION_SECRET.
 services:
   app:
