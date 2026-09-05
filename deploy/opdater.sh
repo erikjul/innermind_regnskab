@@ -3,7 +3,11 @@
 set -e
 cd "$(dirname "$0")/.."
 git pull
-if [ -n "$COMPOSE_FILE" ]; then :; elif docker ps --format "{{.Names}}" | grep -q "^innermind-regnskab$"; then export COMPOSE_FILE=deploy/docker-compose.bag-proxy.yml; fi
+# Variabler fra .env (bl.a. PROXY_NETWORK) gøres tilgængelige for docker compose
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
+if [ -n "${PROXY_NETWORK:-}" ]; then
+  export COMPOSE_FILE=deploy/docker-compose.bag-proxy.yml
+fi
 docker compose build app backup
 docker compose up -d
 docker image prune -f >/dev/null

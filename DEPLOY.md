@@ -80,12 +80,18 @@ docker ps
 docker network ls
 ```
 
-Find navnet på det netværk, proxyen bruger (typisk `server-proxy_default`), og start varianten uden Caddy:
+Find navnet på det netværk, proxyen bruger, skriv det i `.env` som `PROXY_NETWORK=...`, og start
+varianten uden Caddy:
 
 ```bash
 cd /opt/innermind_regnskab
-PROXY_NETWORK=server-proxy_default docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
+docker inspect server-proxy-caddy-1 -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}'   # fx server-proxy_default
+echo "PROXY_NETWORK=server-proxy_default" >> .env
+set -a; . ./.env; set +a
+docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
 ```
+
+`deploy/opdater.sh` læser selv `PROXY_NETWORK` fra `.env` og bruger den rigtige compose-fil.
 
 Programmet får containernavnet `innermind-regnskab` på det fælles netværk. Tilføj blokken fra
 `deploy/Caddyfile.snippet` nederst i proxyens Caddyfile (ret domænet), og genindlæs proxyen:
