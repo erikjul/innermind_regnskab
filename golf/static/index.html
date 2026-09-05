@@ -666,7 +666,7 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
       <div class="row">
         <div class="grow"><h2>${esc(dayLabel(c))} ${esc(fmtDate(c.date))}</h2>
           <div class="muted num">${esc(c.course || "Bane ikke angivet")} · par ${totalPar} · ${esc(fmtTee(c, m.tee))}</div></div>
-        ${c.closed ? `<span class="status">Runden er lukket</span>` : nextHole ? `<button class="btn gold" id="btn-enter">Tast hul ${nextHole.hole}</button>` : `<span class="status">Runden er færdig</span>`}
+        ${c.closed ? `<span class="status">Runden er lukket</span>` : nextHole ? "" : `<span class="status">Runden er færdig</span>`}
       </div>
       <div class="board num">
         <div><div class="v">${card.total}</div><div class="k">Point</div></div>
@@ -684,8 +684,6 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
       </div>
     </div>`);
     el.innerHTML = parts.join("");
-    const enter = $("#btn-enter");
-    if (enter) enter.onclick = () => openSheet(nextHole.hole);
     el.querySelectorAll(".hole").forEach((b) => (b.onclick = () => { if (!c.closed) openSheet(+b.dataset.hole); }));
   }
 
