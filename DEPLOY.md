@@ -70,27 +70,35 @@ Gem med Ctrl+O, Enter, og luk med Ctrl+X.
 til. Skriv IP-adressen med bindestreger: `REGNSKAB_DOMAENE=65-108-1-2.sslip.io`. Adressen bliver så
 `https://65-108-1-2.sslip.io`. Det virker med det samme og kan senere skiftes til et rigtigt domæne.
 
-## 4b. Kører der allerede noget på serveren?
+## 4b. Kører der allerede en proxy på serveren?
 
-Bruger serveren allerede port 80 og 443 til en anden app (fx med Caddy, nginx eller Traefik), må
-regnskabsprogrammet ikke starte sin egen Caddy. Tjek med:
+Bruger serveren allerede port 80 og 443 til en anden app (fx en Caddy i Docker i `/opt/server-proxy`),
+må regnskabsprogrammet ikke starte sin egen Caddy. Tjek med:
 
 ```bash
 docker ps
-ss -tlnp | grep -E ':80 |:443 '
+docker network ls
 ```
 
-Er portene optaget, så brug varianten uden Caddy:
+Find navnet på det netværk, proxyen bruger (typisk `server-proxy_default`), og start varianten uden Caddy:
 
 ```bash
-docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
+cd /opt/innermind_regnskab
+PROXY_NETWORK=server-proxy_default docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
 ```
 
-Programmet lytter så kun lokalt på `127.0.0.1:8010`. Tilføj regnskabsdomænet i den eksisterende proxy
-med blokken fra `deploy/Caddyfile.snippet` (Caddy) eller `deploy/nginx.snippet.conf` (nginx), og
-genindlæs proxyen. Resten af vejledningen er den samme; brug blot `-f deploy/docker-compose.bag-proxy.yml`
-i alle `docker compose`-kommandoer (eller sæt `export COMPOSE_FILE=deploy/docker-compose.bag-proxy.yml`
-én gang i sessionen).
+Programmet får containernavnet `innermind-regnskab` på det fælles netværk. Tilføj blokken fra
+`deploy/Caddyfile.snippet` nederst i proxyens Caddyfile (ret domænet), og genindlæs proxyen:
+
+```bash
+cat /opt/innermind_regnskab/deploy/Caddyfile.snippet >> /opt/server-proxy/Caddyfile
+nano /opt/server-proxy/Caddyfile      # ret domænet, fjern kommentarlinjerne hvis du vil
+cd /opt/server-proxy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Bruger proxyen nginx i stedet, er der et tilsvarende eksempel i `deploy/nginx.snippet.conf`. Resten af
+vejledningen er den samme; brug blot `-f deploy/docker-compose.bag-proxy.yml` i alle
+`docker compose`-kommandoer for regnskabsprogrammet.
 
 ## 5. Start
 

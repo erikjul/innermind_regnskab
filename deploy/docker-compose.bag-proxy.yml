@@ -1,13 +1,15 @@
-# Brug denne fil, når serveren allerede har en reverse proxy (Caddy, nginx, Traefik), som ejer port 80/443.
-# Programmet lytter kun lokalt på 127.0.0.1:8010; proxyen sender trafik for regnskabsdomænet videre dertil.
+# Brug denne fil, når serveren allerede har en Caddy/nginx/Traefik i Docker, som ejer port 80/443 og
+# sender trafik videre over et fælles Docker-netværk (som fx opsætningen i /opt/server-proxy).
 #
-#   docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
+#   PROXY_NETWORK=server-proxy_default docker compose -f deploy/docker-compose.bag-proxy.yml up -d --build
 #
-# Tilføj derefter regnskabsdomænet i den eksisterende proxy, se deploy/Caddyfile.snippet eller deploy/nginx.snippet.conf.
+# Programmet får det faste containernavn "innermind-regnskab" og lytter på port 8000 på det fælles netværk.
+# Tilføj derefter regnskabsdomænet i proxyens Caddyfile, se deploy/Caddyfile.snippet.
 name: innermind_regnskab
 services:
   app:
     build: ..
+    container_name: innermind-regnskab
     restart: unless-stopped
     env_file: ../.env
     environment:
@@ -15,11 +17,13 @@ services:
     volumes:
       - regnskab_data:/data
       - regnskab_backup:/backup
-    ports:
-      - "127.0.0.1:8010:8000"
+    networks:
+      - default
+      - proxy
 
   backup:
     build: ..
+    container_name: innermind-regnskab-backup
     restart: unless-stopped
     env_file: ../.env
     volumes:
@@ -30,6 +34,11 @@ services:
                python -m app.backup;
                sleep $$(( (26*3600 - ($$(date +%s) % 86400)) % 86400 ));
              done'
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-server-proxy_default}
 
 volumes:
   regnskab_data:

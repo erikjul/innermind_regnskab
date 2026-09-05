@@ -1,8 +1,7 @@
-# Tilføj denne blok til serverens eksisterende Caddyfile (fx den SlamChamp bruger) og genindlæs Caddy:
-#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile     (hvis Caddy kører i Docker)
-#   systemctl reload caddy                                                    (hvis Caddy kører direkte på serveren)
-# Kører Caddy i Docker, skal den kunne nå værten: erstat 127.0.0.1 med host.docker.internal og tilføj
-#   extra_hosts: ["host.docker.internal:host-gateway"]  på caddy-servicen.
+# Tilføj denne blok nederst i serverens eksisterende Caddyfile (fx /opt/server-proxy/Caddyfile) og genindlæs Caddy:
+#   cd /opt/server-proxy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+# Containernavnet "innermind-regnskab" kommer fra deploy/docker-compose.bag-proxy.yml, og begge containere
+# skal være på samme Docker-netværk (PROXY_NETWORK).
 
 regnskab.innermind.dk {
     encode gzip
@@ -14,5 +13,5 @@ regnskab.innermind.dk {
         X-Content-Type-Options nosniff
         X-Frame-Options SAMEORIGIN
     }
-    reverse_proxy 127.0.0.1:8010
+    reverse_proxy innermind-regnskab:8000
 }
