@@ -6,4 +6,3 @@ data/
 venv/
 *.egg-info/
 .pytest_cache/
-golf/data/

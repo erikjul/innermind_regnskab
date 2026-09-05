@@ -2,8 +2,9 @@
 
 Med denne opsætning kører programmet døgnet rundt på en lille server, og brugerne logger ind fra
 en browser på pc, tablet eller telefon. Alt kører i Docker: programmet, en natlig backup og én fælles
-Caddy (mappen `proxy/`), som sørger for HTTPS-certifikater og fordeler trafikken, så flere apps
-(fx regnskab og golfturneringen i `golf/`) kan dele samme server.
+Caddy fra repoet [server-proxy](https://github.com/erikjul/server-proxy), som sørger for
+HTTPS-certifikater og fordeler trafikken, så flere apps (fx regnskab og
+[golfturnering](https://github.com/erikjul/golfturnering)) kan dele samme server.
 
 Det tager 30 til 45 minutter første gang. Du skal bruge:
 
@@ -62,10 +63,13 @@ Gem med Ctrl+O, Enter, og luk med Ctrl+X.
 
 ## 4. Vælg adresser og start den fælles Caddy
 
-Alle apps på serveren deler én Caddy, som bor i mappen `proxy/`. Den får en adresse pr. app:
+Alle apps på serveren deler én Caddy fra repoet `server-proxy`. Den får en adresse pr. app. Kører
+den allerede på serveren, skal du kun sørge for, at `REGNSKAB_DOMAENE` står i dens `.env`:
 
 ```bash
-cd /opt/innermind_regnskab/proxy
+cd /opt
+git clone https://github.com/erikjul/server-proxy.git
+cd server-proxy
 cp .env.example .env
 nano .env
 ```
@@ -122,8 +126,8 @@ der; ellers kommer siden *Opret administrator* frem).
 
 * **Opdatere programmet:** `cd /opt/innermind_regnskab && ./deploy/opdater.sh`
 * **Flere apps:** hver app har sin egen `docker-compose.yml`, der kobler sig på netværket `web`
-  med et alias (fx `golf`). Tilføj en blok i `proxy/Caddyfile` og en adresse i `proxy/.env`, og
-  genstart Caddy med `cd proxy && docker compose up -d`. Golfturneringen er beskrevet i `golf/README.md`.
+  med et alias (fx `golf`). Se README i [server-proxy](https://github.com/erikjul/server-proxy) for,
+  hvordan en ny app tilføjes.
 * **Se log:** `docker compose logs --tail 100 app`
 * **Genstart:** `docker compose restart`
 * **Backup:** containeren `backup` laver en zip hver nat i volumen `regnskab_backup` og beholder de
