@@ -39,6 +39,8 @@ def test_forside_og_state(client):
     assert st["settings"]["rounds"][0]["course"] == "Samsø Golfklub"
     r0 = st["settings"]["rounds"][0]
     assert r0["tees"][0]["name"] == "56" and r0["tees"][0]["cr"] == 70.8 and r0["tees"][0]["slope"] == 131
+    assert r0["tees"][1]["name"] == "49" and r0["tees"][1]["cr"] == 66.9 and r0["tees"][1]["slope"] == 122
+    assert sum(r0["tees"][1]["lengths"]) == 4885
     # Fra baneguiden: par 72 med 36 ud og 36 ind, handicapnøgle 1 på hul 5, 18 på hul 15
     assert r0["par"] == [4, 4, 5, 3, 4, 4, 4, 3, 5, 5, 3, 4, 4, 5, 3, 4, 4, 4]
     assert r0["si"] == [13, 9, 3, 15, 1, 11, 7, 17, 5, 2, 16, 6, 12, 8, 18, 10, 4, 14]
@@ -138,18 +140,23 @@ const course = {
 };
 const withTee = (cr, slope) => ({...course, tees: [{name: "Std", cr, slope}]});
 
-// Samsø Golfklub, tee 56 (herrer): par 72, CR 70,8, slope 131 – tal fra DGU's course handicap table
-const samsoe = {...course, tees: [{name: "56", cr: 70.8, slope: 131}, {name: "49", cr: 68.0, slope: 120}]};
+// Samsø Golfklub, herrer: tee 56 CR 70,8 / slope 131 og tee 49 CR 66,9 / slope 122 – tal fra klubbens
+// konverteringstabel (DGU course handicap table)
+const samsoe = {...course, tees: [{name: "56", cr: 70.8, slope: 131}, {name: "49", cr: 66.9, slope: 122}]};
 for (const [hcp, ph] of [[-5.0, -7], [-4.6, -7], [-4.5, -6], [-0.3, -2], [-0.2, -1], [0.6, -1], [0.7, 0], [1.4, 0], [1.5, 1],
     [11.9, 13], [12.6, 13], [12.7, 14], [16.1, 17], [16.2, 18], [23.8, 26], [23.9, 27], [30.0, 34], [30.7, 34], [30.8, 35],
     [53.3, 61], [54.0, 61]]) {
   assert.strictEqual(S.playingHandicap(hcp, samsoe, 100, "56"), ph, "hcp " + hcp);
   assert.strictEqual(S.playingHandicap(hcp, samsoe, 100), ph, "hcp " + hcp + " (første tee)");
 }
-// Andet tee giver andet spillehandicap; ukendt tee falder tilbage til rundens første
-assert.strictEqual(S.playingHandicap(12.4, samsoe, 100, "49"), 9);  // 12.4*120/113 - 4 = 9.17
+// Tee 49 (herrer) mod tabellen
+for (const [hcp, ph] of [[-5.0, -10], [-4.1, -10], [-4.0, -9], [0.5, -5], [0.6, -4], [4.2, -1], [4.3, 0], [5.1, 0], [5.2, 1],
+    [11.7, 8], [12.5, 8], [12.6, 9], [24.6, 21], [24.7, 22], [37.6, 35], [37.7, 36], [53.4, 53], [54.0, 53]]) {
+  assert.strictEqual(S.playingHandicap(hcp, samsoe, 100, "49"), ph, "tee 49 hcp " + hcp);
+}
+// Ukendt tee falder tilbage til rundens første
 assert.strictEqual(S.playingHandicap(12.4, samsoe, 100, "99"), 13);
-assert.strictEqual(S.scorecard({id: "x", name: "X", hcp: 12.4, tee: "49"}, samsoe, null, 100).playingHcp, 9);
+assert.strictEqual(S.scorecard({id: "x", name: "X", hcp: 12.4, tee: "49"}, samsoe, null, 100).playingHcp, 8);
 assert.strictEqual(S.scorecard({id: "x", name: "X", hcp: 12.4, tee: "49"}, samsoe, null, 100).tee, "49");
 // Gammelt format (cr/slope direkte på runden) virker stadig
 assert.strictEqual(S.playingHandicap(12.4, {par: course.par, si: course.si, cr: 70.8, slope: 131}, 100), 13);

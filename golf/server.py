@@ -32,8 +32,8 @@ ANTAL_RUNDER = 3
 
 # Standardbane: Samsø Golfklub, 18 hullers bane. Par, handicapnøgle (index) og længder pr. hul er
 # fra klubbens baneguide; CR 70,8 og slope 131 for tee 56 (herrer) er fra DGU's course handicap
-# table. Tee 49 og 61 har kendte længder, men CR og slope skal hentes fra klubbens konverteringstabel,
-# så de tilføjes under Opsætning (længderne udfyldes så automatisk).
+# table, ligesom CR 66,9 og slope 122 for tee 49 (herrer). Tee 61 (herrer: CR 73,2, slope 137) kan
+# tilføjes under Opsætning; længderne udfyldes så automatisk.
 STANDARD_COURSE = "Samsø Golfklub"
 STANDARD_PAR = [4, 4, 5, 3, 4, 4, 4, 3, 5, 5, 3, 4, 4, 5, 3, 4, 4, 4]
 STANDARD_SI = [13, 9, 3, 15, 1, 11, 7, 17, 5, 2, 16, 6, 12, 8, 18, 10, 4, 14]
@@ -42,7 +42,10 @@ SAMSOE_LAENGDER = {
     "56": [320, 350, 445, 140, 345, 320, 320, 150, 435, 435, 130, 325, 330, 435, 145, 345, 360, 285],
     "61": [336, 380, 485, 173, 345, 346, 320, 172, 438, 452, 149, 359, 330, 512, 172, 416, 370, 340],
 }
-STANDARD_TEES = [{"name": "56", "cr": 70.8, "slope": 131, "lengths": list(SAMSOE_LAENGDER["56"])}]
+STANDARD_TEES = [
+    {"name": "56", "cr": 70.8, "slope": 131, "lengths": list(SAMSOE_LAENGDER["56"])},
+    {"name": "49", "cr": 66.9, "slope": 122, "lengths": list(SAMSOE_LAENGDER["49"])},
+]
 STANDARD_REGLER = """## Lokalregler (Samsø Golfklub)
 Banemarkeringer: hvide = out of bounds, røde = strafområde, blå = areal under reparation, grøn top = spilleforbud.
 1. Out of bounds defineres som linjen mellem de banenære punkter af hvide pæle i jordhøjde.

@@ -361,7 +361,7 @@ Drikkevand foran hul 1 og 10. Toiletter ved hul 10 og 13. Hjertestarter ved klub
         settings: {
           name: "Golfturnering 2026", allowance: 100, rules: SAMSOE.rules,
           rounds: [["2026-09-18", "Fredag"], ["2026-09-19", "Lørdag"], ["2026-09-20", "Søndag"]].map(([date, label]) => ({
-            date, label, course: "Samsø Golfklub", tees: [{ name: "56", cr: 70.8, slope: 131, lengths: SAMSOE.lengths["56"].slice() }], par: PAR.slice(), si: SI.slice(), closed: false,
+            date, label, course: "Samsø Golfklub", tees: [{ name: "56", cr: 70.8, slope: 131, lengths: SAMSOE.lengths["56"].slice() }, { name: "49", cr: 66.9, slope: 122, lengths: SAMSOE.lengths["49"].slice() }], par: PAR.slice(), si: SI.slice(), closed: false,
           })),
         },
         players: [], scores: { 0: {}, 1: {}, 2: {} },

@@ -8,8 +8,8 @@ Alle, der har adressen, kan åbne den på telefonen, tilmelde sig og taste slag 
 * **Tilmelding:** navn og DGU-handicap (HCP-index), og valg af tee hvis runden har flere. Appen
   omregner til spillehandicap efter WHS: HCP-index × slope ÷ 113 + (course rating − par), ganget
   med handicaptildelingen (100 % som standard, 95 % kan vælges) og rundet til hele slag. Med 100 %
-  giver det præcis de samme tal som klubbens course handicap table (testet mod DGU's tabel for
-  Samsø Golfklub, tee 56). Slagene fordeles efter banens handicapnøgle.
+  giver det præcis de samme tal som klubbens konverteringstabel (testet mod DGU's tabel for
+  Samsø Golfklub, tee 56 og 49, herrer). Slagene fordeles efter banens handicapnøgle.
 * **Scorekort:** tryk på et hul og vælg antal slag på taltastaturet. Stablefordpointene regnes ud
   med det samme, og tastaturet springer selv videre til næste hul. *Streg* = hullet opgivet (0 point).
 * **Stilling:** ranglisten for runden opdateres hvert par sekunder hos alle. Pile viser, hvem der er
@@ -28,16 +28,18 @@ Alle, der har adressen, kan åbne den på telefonen, tilmelde sig og taste slag 
   (`GOLF_PIN`), så kun du kan gøre de ting – tilmelding og scoreindtastning kræver aldrig PIN.
 
 Standardopsætningen er **Samsø Golfklub, 18 hullers bane** med par, handicapnøgle og længder pr. hul
-fra klubbens baneguide og lokalreglerne fra samme. Tee 56 (herrer) er sat op med course rating 70,8
-og slope 131 fra DGU's course handicap table. Spiller nogen fra tee 49 eller 61, tilføjer du dem
-under Opsætning med course rating og slope fra klubbens konverteringstabel; længderne udfyldes
-automatisk, og spillerne vælger så selv tee ved tilmelding. Husk *Kopiér bane til alle runder*.
+fra klubbens baneguide og lokalreglerne fra samme. To tees for herrer er sat op fra klubbens
+konverteringstabel: **tee 56 (course rating 70,8, slope 131)** og **tee 49 (course rating 66,9,
+slope 122)**. Spillerne vælger tee ved tilmelding (tee 56 er forvalgt) og kan ændre det med *Ret*.
+Skal nogen spille fra tee 61 (herrer: course rating 73,2, slope 137) eller fra dametees, tilføjer du
+dem under Opsætning; længderne udfyldes automatisk. Husk *Kopiér bane til alle runder*.
 
 | Hul | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Par | 4 | 4 | 5 | 3 | 4 | 4 | 4 | 3 | 5 | 5 | 3 | 4 | 4 | 5 | 3 | 4 | 4 | 4 |
 | Nøgle | 13 | 9 | 3 | 15 | 1 | 11 | 7 | 17 | 5 | 2 | 16 | 6 | 12 | 8 | 18 | 10 | 4 | 14 |
 | Tee 56 (m) | 320 | 350 | 445 | 140 | 345 | 320 | 320 | 150 | 435 | 435 | 130 | 325 | 330 | 435 | 145 | 345 | 360 | 285 |
+| Tee 49 (m) | 265 | 310 | 395 | 120 | 305 | 280 | 275 | 125 | 385 | 385 | 115 | 280 | 275 | 390 | 120 | 300 | 315 | 245 |
 
 ## Prøv den på din egen pc
 
