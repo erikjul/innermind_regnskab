@@ -326,7 +326,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         settings: {
           name: "Golfturnering 2026", allowance: 100,
           rounds: [["2026-09-18", "Fredag"], ["2026-09-19", "Lørdag"], ["2026-09-20", "Søndag"]].map(([date, label]) => ({
-            date, label, course: "", tee: "", cr: 72, slope: 113, par: PAR.slice(), si: SI.slice(), closed: false,
+            date, label, course: "Samsø Golfklub", tees: [{ name: "56", cr: 70.8, slope: 131 }], par: PAR.slice(), si: SI.slice(), closed: false,
           })),
         },
         players: [], scores: { 0: {}, 1: {}, 2: {} },
@@ -340,7 +340,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       async state(since) { return since === st.version ? { unchanged: true, version: since } : JSON.parse(JSON.stringify({ ...st, pinRequired: false })); },
       async addPlayer(p) {
         if (st.players.some((x) => x.name.toLowerCase() === p.name.toLowerCase())) throw new Error("Der er allerede en spiller med det navn");
-        const player = { id: "p" + Math.random().toString(16).slice(2, 10), name: p.name, hcp: p.hcp, absent: [false, false, false], created: Date.now() / 1000 };
+        const player = { id: "p" + Math.random().toString(16).slice(2, 10), name: p.name, hcp: p.hcp, tee: p.tee || "", absent: [false, false, false], created: Date.now() / 1000 };
         st.players.push(player); save(); return { player };
       },
       async updatePlayer(id, p) { const x = find(id); Object.assign(x, p); save(); return { player: x }; },
@@ -395,6 +395,18 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
   }
 
   const me = () => (state ? state.players.find((p) => p.id === meId) : null) || null;
+  /** Alle tee-navne i turneringen (på tværs af runder), i den rækkefølge de er sat op. */
+  function teeNames() {
+    const names = [];
+    state.settings.rounds.forEach((r) => (r.tees || []).forEach((t) => { if (!names.includes(t.name)) names.push(t.name); }));
+    return names;
+  }
+  const teeSelect = (id, current) => {
+    const names = teeNames();
+    if (names.length < 2) return "";
+    return `<label class="f" style="width:110px">Tee<select name="${id}">${names.map((n) => `<option value="${esc(n)}" ${n === (current || names[0]) ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
+  };
+  const fmtTee = (course, teeName) => { const t = S.teeFor(course, teeName); return "tee " + t.name + " · CR " + String(t.cr).replace(".", ",") + " · slope " + t.slope; };
   const courseOf = (r) => state.settings.rounds[r];
   const scoresOf = (r) => state.scores[String(r)] || {};
 
@@ -456,14 +468,15 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     const m = me();
     if (m && !editingMe) {
       const c = courseOf(round);
-      const ph = S.playingHandicap(m.hcp, c, state.settings.allowance);
+      const ph = S.playingHandicap(m.hcp, c, state.settings.allowance, m.tee);
+      const tee = S.teeFor(c, m.tee);
       const absent = m.absent && m.absent[round];
       el.innerHTML = `
         <div class="who">
           <div class="avatar">${esc(initials(m.name))}</div>
           <div class="grow">
             <div class="name">${esc(m.name)}</div>
-            <div class="hcp num">HCP ${fmtHcp(m.hcp)} · spillehandicap ${ph} ${esc(dayLabel(c))}${absent ? " · <b>spiller ikke</b>" : ""}</div>
+            <div class="hcp num">HCP ${fmtHcp(m.hcp)} · spillehandicap ${ph} ${esc(dayLabel(c).toLowerCase())}${teeNames().length > 1 ? " fra tee " + esc(tee.name) : ""}${absent ? " · <b>spiller ikke</b>" : ""}</div>
           </div>
           <button class="btn secondary small" id="btn-edit-me">Ret</button>
           <button class="btn secondary small" id="btn-switch">Skift</button>
@@ -478,6 +491,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         <form id="form-edit" class="row" style="align-items:end">
           <label class="f grow">Navn<input type="text" name="name" value="${esc(m.name)}" required maxlength="60"></label>
           <label class="f" style="width:110px">HCP-index<input type="text" name="hcp" inputmode="decimal" value="${fmtHcp(m.hcp)}" required></label>
+          ${teeSelect("tee", m.tee)}
           <div style="flex-basis:100%"></div>
           ${state.settings.rounds.map((r, i) => `<label class="check"><input type="checkbox" name="absent${i}" ${m.absent && m.absent[i] ? "checked" : ""}> Spiller ikke ${esc(dayLabel(r).toLowerCase())}</label>`).join("")}
           <div style="flex-basis:100%"></div>
@@ -491,7 +505,8 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         const hcp = parseNum(f.hcp.value);
         if (isNaN(hcp)) return toast("Skriv dit HCP-index, fx 12,4");
         const absent = [0, 1, 2].map((i) => f["absent" + i].checked);
-        guarded(async () => { await api.updatePlayer(m.id, { name: f.name.value.trim(), hcp, absent }); editingMe = false; });
+        const tee = f.tee ? f.tee.value : (m.tee || "");
+        guarded(async () => { await api.updatePlayer(m.id, { name: f.name.value.trim(), hcp, absent, tee }); editingMe = false; });
       };
       return;
     }
@@ -508,9 +523,10 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       <form id="form-join" class="row" style="align-items:end">
         <label class="f grow">Navn<input type="text" name="name" required maxlength="60" autocomplete="name" placeholder="Fornavn Efternavn"></label>
         <label class="f" style="width:110px">HCP-index<input type="text" name="hcp" inputmode="decimal" required placeholder="12,4"></label>
+        ${teeSelect("tee", "")}
         <button class="btn" type="submit">Tilmeld</button>
       </form>
-      <p class="muted" style="font-size:13px">Dit DGU-handicap omregnes til spillehandicap ud fra banens slope og course rating under Opsætning.</p>`;
+      <p class="muted" style="font-size:13px">Dit DGU-handicap omregnes til spillehandicap efter banens course rating og slope, præcis som klubbens konverteringstabel.</p>`;
     const sel = $("#sel-me");
     if (sel) sel.onchange = () => { if (sel.value) { meId = sel.value; ls.set("golf.me", meId); render(); } };
     $("#form-join").onsubmit = (ev) => {
@@ -519,7 +535,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       const hcp = parseNum(f.hcp.value);
       if (isNaN(hcp)) return toast("Skriv dit HCP-index, fx 12,4");
       guarded(async () => {
-        const res = await api.addPlayer({ name: f.name.value.trim(), hcp });
+        const res = await api.addPlayer({ name: f.name.value.trim(), hcp, tee: f.tee ? f.tee.value : "" });
         meId = res.player.id; ls.set("golf.me", meId);
       });
     };
@@ -541,7 +557,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     parts.push(`<div class="card" style="display:grid;gap:12px">
       <div class="row">
         <div class="grow"><h2>${esc(dayLabel(c))} ${esc(fmtDate(c.date))}</h2>
-          <div class="muted">${esc(c.course || "Bane ikke angivet")}${c.tee ? " · " + esc(c.tee) : ""} · par ${totalPar} · CR ${String(c.cr).replace(".", ",")} · slope ${c.slope}</div></div>
+          <div class="muted num">${esc(c.course || "Bane ikke angivet")} · par ${totalPar} · ${esc(fmtTee(c, m.tee))}</div></div>
         ${c.closed ? `<span class="status">Runden er lukket</span>` : nextHole ? `<button class="btn" id="btn-enter">Tast hul ${nextHole.hole}</button>` : `<span class="status">Runden er færdig</span>`}
       </div>
       <div class="summary num">
@@ -601,7 +617,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         <tbody>${st.rows.map((r) => `<tr class="${m && r.id === m.id ? "me" : ""}">
           <td class="rank num">${r.rank}.</td>
           <td><span class="move num ${r.move > 0 ? "up" : r.move < 0 ? "down" : "same"}">${r.move > 0 ? "▲" + r.move : r.move < 0 ? "▼" + -r.move : "–"}</span></td>
-          <td class="name"><div class="pname">${esc(r.name)}</div><div class="psub num">HCP ${fmtHcp(r.hcp)} · spiller ${r.playingHcp}${r.played ? " · for " + r.front + " / bag " + r.back : ""}</div></td>
+          <td class="name"><div class="pname">${esc(r.name)}</div><div class="psub num">HCP ${fmtHcp(r.hcp)} · spiller ${r.playingHcp}${teeNames().length > 1 ? " (tee " + esc(r.tee) + ")" : ""}${r.played ? " · for " + r.front + " / bag " + r.back : ""}</div></td>
           <td class="c num">${r.played === 18 ? "F" : r.played}</td>
           <td class="r big num">${r.total}</td>
           ${st.complete ? `<td class="r"><span class="tp ${r.rank === 1 ? "win" : ""}">${r.tournamentPoints}</span></td>` : ""}
@@ -662,12 +678,14 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
             <label class="f">Dato<input type="date" data-r="${i}" data-k="date" value="${esc(r.date)}"></label>
             <label class="f">Bane<input type="text" data-r="${i}" data-k="course" value="${esc(r.course)}" placeholder="fx Rungsted Golf Klub"></label>
           </div>
-          <div class="four">
-            <label class="f">Tee<input type="text" data-r="${i}" data-k="tee" value="${esc(r.tee)}" placeholder="fx Gul"></label>
-            <label class="f">Course rating<input type="text" inputmode="decimal" data-r="${i}" data-k="cr" value="${String(r.cr).replace(".", ",")}"></label>
-            <label class="f">Slope<input type="number" data-r="${i}" data-k="slope" value="${r.slope}" min="55" max="155"></label>
-            <label class="f">Par i alt<input type="text" readonly value="${r.par.reduce((a, b) => a + b, 0)}"></label>
-          </div>
+          <div class="eyebrow">Tees (course rating og slope fra klubbens konverteringstabel) · par i alt ${r.par.reduce((a, b) => a + b, 0)}</div>
+          ${r.tees.map((t, k) => `<div class="four">
+            <label class="f">Tee<input type="text" data-r="${i}" data-tee="${k}" data-k="name" value="${esc(t.name)}" placeholder="fx 56"></label>
+            <label class="f">Course rating<input type="text" inputmode="decimal" data-r="${i}" data-tee="${k}" data-k="cr" value="${String(t.cr).replace(".", ",")}"></label>
+            <label class="f">Slope<input type="number" data-r="${i}" data-tee="${k}" data-k="slope" value="${t.slope}" min="55" max="155"></label>
+            <label class="f">&nbsp;<button class="btn secondary small" type="button" data-deltee="${i}:${k}" ${r.tees.length < 2 ? "disabled" : ""}>Fjern tee</button></label>
+          </div>`).join("")}
+          <div><button class="btn secondary small" type="button" data-addtee="${i}">+ Tilføj tee (fx 49 til damer)</button></div>
           <div class="eyebrow">Par pr. hul</div>
           <div class="grid18">${r.par.map((p, h) => `<div><div class="lab">${h + 1}</div><input type="number" min="3" max="6" data-r="${i}" data-arr="par" data-h="${h}" value="${p}"></div>`).join("")}</div>
           <div class="eyebrow">Handicapnøgle pr. hul (1–18)</div>
@@ -683,17 +701,23 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
           <p class="muted">Sletter alle spillere og scorer, men beholder baneopsætningen.</p>
           <button class="btn danger" id="btn-reset">Slet alle spillere og scorer</button>
         </details>
-        <p class="muted" style="font-size:13px">Spillehandicap = HCP-index × slope ÷ 113 + (course rating − par), ganget med handicaptildelingen og rundet til hele slag. Slagene fordeles efter handicapnøglen.</p>
+        <p class="muted" style="font-size:13px">Spillehandicap = HCP-index × slope ÷ 113 + (course rating − par), ganget med handicaptildelingen og rundet til hele slag. Med 100 % giver det samme tal som klubbens konverteringstabel. Slagene fordeles efter handicapnøglen. Spillere vælger selv tee ved tilmelding, når der er mere end ét.</p>
       </div>`;
 
     const bind = (inp) => {
       const i = +inp.dataset.r;
       if (inp.dataset.arr) { d.rounds[i][inp.dataset.arr][+inp.dataset.h] = parseInt(inp.value, 10) || 0; }
-      else if (inp.dataset.k === "cr") d.rounds[i].cr = parseNum(inp.value);
-      else if (inp.dataset.k === "slope") d.rounds[i].slope = parseInt(inp.value, 10) || 113;
+      else if (inp.dataset.tee != null) {
+        const t = d.rounds[i].tees[+inp.dataset.tee];
+        if (inp.dataset.k === "cr") t.cr = parseNum(inp.value);
+        else if (inp.dataset.k === "slope") t.slope = parseInt(inp.value, 10) || 113;
+        else t.name = inp.value;
+      }
       else d.rounds[i][inp.dataset.k] = inp.value;
       d.rounds[i].label = dayLabel(d.rounds[i]);
     };
+    el.querySelectorAll("[data-addtee]").forEach((b) => (b.onclick = () => { d.rounds[+b.dataset.addtee].tees.push({ name: "", cr: 72, slope: 113 }); render(); }));
+    el.querySelectorAll("[data-deltee]").forEach((b) => (b.onclick = () => { const [i, k] = b.dataset.deltee.split(":").map(Number); d.rounds[i].tees.splice(k, 1); render(); }));
     el.querySelectorAll("input[data-r]").forEach((inp) => (inp.oninput = () => bind(inp)));
     $("#s-name").oninput = (e) => (d.name = e.target.value);
     $("#s-allowance").onchange = (e) => (d.allowance = parseInt(e.target.value, 10));
@@ -703,7 +727,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     $("#btn-copy").onclick = () => {
       for (let i = 1; i < ROUND_COUNT; i++) {
         const r0 = d.rounds[0];
-        Object.assign(d.rounds[i], { course: r0.course, tee: r0.tee, cr: r0.cr, slope: r0.slope, par: r0.par.slice(), si: r0.si.slice() });
+        Object.assign(d.rounds[i], { course: r0.course, tees: r0.tees.map((t) => ({ ...t })), par: r0.par.slice(), si: r0.si.slice() });
       }
       render(); toast("Banen er kopieret til alle tre runder. Husk at gemme.");
     };
@@ -711,7 +735,12 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       for (const r of d.rounds) {
         if (r.par.some((p) => p < 3 || p > 6)) return toast("Par skal være 3–6 på alle huller");
         if (r.si.slice().sort((a, b) => a - b).join() !== Array.from({ length: 18 }, (_, k) => k + 1).join()) return toast("Handicapnøglerne skal være tallene 1–18, hver brugt én gang");
-        if (!(r.cr >= 40 && r.cr <= 90)) return toast("Course rating ser forkert ud");
+        if (!r.tees.length) return toast("Hver runde skal have mindst ét tee");
+        for (const t of r.tees) {
+          if (!t.name.trim()) return toast("Giv hvert tee et navn, fx 56");
+          if (!(t.cr >= 40 && t.cr <= 90)) return toast("Course rating for tee " + t.name + " ser forkert ud");
+          if (!(t.slope >= 55 && t.slope <= 155)) return toast("Slope for tee " + t.name + " ser forkert ud");
+        }
       }
       guarded(async () => { await api.saveSettings(d); settingsDraft = null; toast("Opsætningen er gemt"); });
     };

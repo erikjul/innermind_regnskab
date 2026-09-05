@@ -5,9 +5,11 @@ Alle, der har adressen, kan åbne den på telefonen, tilmelde sig og taste slag 
 
 ## Sådan virker den
 
-* **Tilmelding:** navn og DGU-handicap (HCP-index). Appen omregner til spillehandicap efter WHS:
-  HCP-index × slope ÷ 113 + (course rating − par), ganget med handicaptildelingen (100 % som
-  standard, 95 % kan vælges) og rundet til hele slag. Slagene fordeles efter banens handicapnøgle.
+* **Tilmelding:** navn og DGU-handicap (HCP-index), og valg af tee hvis runden har flere. Appen
+  omregner til spillehandicap efter WHS: HCP-index × slope ÷ 113 + (course rating − par), ganget
+  med handicaptildelingen (100 % som standard, 95 % kan vælges) og rundet til hele slag. Med 100 %
+  giver det præcis de samme tal som klubbens course handicap table (testet mod DGU's tabel for
+  Samsø Golfklub, tee 56). Slagene fordeles efter banens handicapnøgle.
 * **Scorekort:** tryk på et hul og vælg antal slag på taltastaturet. Stablefordpointene regnes ud
   med det samme, og tastaturet springer selv videre til næste hul. *Streg* = hullet opgivet (0 point).
 * **Stilling:** ranglisten for runden opdateres hvert par sekunder hos alle. Pile viser, hvem der er
@@ -18,13 +20,16 @@ Alle, der har adressen, kan åbne den på telefonen, tilmelde sig og taste slag 
   vinderen altså 20, nr. 2 får 17 og nr. 18 får 1.
 * **Samlet:** turneringspoint lagt sammen over de tre runder. Ved lighed tæller flest
   Stablefordpoint i alt, derefter laveste HCP-index.
-* **Opsætning (tandhjulet):** turneringens navn, bane, tee, course rating, slope, par og
-  handicapnøgle pr. hul for hver runde (*Kopiér bane til alle runder* sparer tid), *Luk runden nu*
-  hvis nogen aldrig får tastet færdig, og sletning af spillere. Sæt en PIN i `.env` (`GOLF_PIN`),
-  så kun du kan gøre de ting – tilmelding og scoreindtastning kræver aldrig PIN.
+* **Opsætning (tandhjulet):** turneringens navn, bane, ét eller flere tees med course rating og
+  slope, par og handicapnøgle pr. hul for hver runde (*Kopiér bane til alle runder* sparer tid),
+  *Luk runden nu* hvis nogen aldrig får tastet færdig, og sletning af spillere. Sæt en PIN i `.env`
+  (`GOLF_PIN`), så kun du kan gøre de ting – tilmelding og scoreindtastning kræver aldrig PIN.
 
-Inden turneringen: åbn Opsætning og indtast banens par, handicapnøgler, course rating og slope fra
-scorekortet/DGU's baneoversigt for den tee, I spiller fra. Standardbanen er en generisk par 72.
+Standardopsætningen er **Samsø Golfklub, 18 hullers bane, tee 56 (herrer): par 72, course rating
+70,8, slope 131**. Par og handicapnøgle pr. hul er derimod en generisk par 72-fordeling, så inden
+turneringen skal du under Opsætning taste par og nøgle for hvert hul fra klubbens scorekort og trykke
+*Kopiér bane til alle runder*. Spiller nogen fra tee 49 eller 61, tilføjer du dem som tees med
+tallene fra klubbens konverteringstabel, og spillerne vælger så selv tee ved tilmelding.
 
 ## Prøv den på din egen pc
 

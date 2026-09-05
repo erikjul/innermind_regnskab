@@ -36,6 +36,8 @@ def test_forside_og_state(client):
     st = client.get("/api/state").json()
     assert len(st["settings"]["rounds"]) == 3
     assert st["settings"]["rounds"][0]["date"] == "2026-09-18"
+    assert st["settings"]["rounds"][0]["course"] == "Samsø Golfklub"
+    assert st["settings"]["rounds"][0]["tees"] == [{"name": "56", "cr": 70.8, "slope": 131}]
     assert st["pinRequired"] is True
     assert client.get("/api/state", params={"since": st["version"]}).json()["unchanged"] is True
 
@@ -45,6 +47,8 @@ def test_tilmeld_score_og_persistens(client, golf):
     assert r.status_code == 201
     p = r.json()["player"]
     assert p["name"] == "Erik Nielsen" and p["hcp"] == 12.4 and p["absent"] == [False, False, False]
+    assert p["tee"] == ""
+    assert client.post("/api/players", json={"name": "Lise", "hcp": 30, "tee": "49"}).json()["player"]["tee"] == "49"
 
     assert client.post("/api/players", json={"name": "erik nielsen", "hcp": 5}).status_code == 409
     assert client.post("/api/players", json={"name": "X", "hcp": 60}).status_code == 422
@@ -62,8 +66,8 @@ def test_tilmeld_score_og_persistens(client, golf):
     assert p["id"] not in client.get("/api/state").json()["scores"]["0"]
 
     # Ret spiller
-    r = client.put(f"/api/players/{p['id']}", json={"hcp": 11.2, "absent": [False, True, False]})
-    assert r.json()["player"]["hcp"] == 11.2 and r.json()["player"]["absent"][1] is True
+    r = client.put(f"/api/players/{p['id']}", json={"hcp": 11.2, "absent": [False, True, False], "tee": "61"})
+    assert r.json()["player"]["hcp"] == 11.2 and r.json()["player"]["absent"][1] is True and r.json()["player"]["tee"] == "61"
 
     # Data ligger på disk og overlever en genstart
     data = json.loads((golf.DATA_FIL).read_text(encoding="utf-8"))
@@ -93,12 +97,17 @@ def test_opsaetning_valideres(client):
     st = client.get("/api/state").json()["settings"]
     st["name"] = "Bornholm Open"
     st["rounds"][0]["course"] = "Rø Golfbaner"
-    st["rounds"][0]["cr"] = 71.3
-    st["rounds"][0]["slope"] = 128
+    st["rounds"][0]["tees"] = [{"name": "Gul", "cr": 71.3, "slope": 128}, {"name": "Rød", "cr": 72.0, "slope": 124}]
     r = client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"})
     assert r.status_code == 200, r.text
     ny = client.get("/api/state").json()["settings"]
-    assert ny["name"] == "Bornholm Open" and ny["rounds"][0]["slope"] == 128
+    assert ny["name"] == "Bornholm Open" and ny["rounds"][0]["tees"][1]["slope"] == 124
+
+    st["rounds"][0]["tees"][1]["name"] = "gul"  # samme navn to gange
+    assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
+    st["rounds"][0]["tees"] = []
+    assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
+    st["rounds"][0]["tees"] = [{"name": "Gul", "cr": 71.3, "slope": 128}]
 
     st["rounds"][1]["si"][1] = 7  # nøgle brugt to gange
     assert client.put("/api/settings", json=st, headers={"X-Golf-Pin": "1234"}).status_code == 422
@@ -111,15 +120,32 @@ JS_TEST = r"""
 const assert = require("assert");
 const S = require(process.argv[2]);
 const course = {
-  cr: 72.0, slope: 113,
+  tees: [{name: "Std", cr: 72.0, slope: 113}],
   par: [4,4,3,5,4,4,3,5,4,4,5,3,4,4,5,3,4,4],
   si:  [7,3,15,11,1,13,17,9,5,8,12,18,2,14,10,16,4,6],
 };
+const withTee = (cr, slope) => ({...course, tees: [{name: "Std", cr, slope}]});
+
+// Samsø Golfklub, tee 56 (herrer): par 72, CR 70,8, slope 131 – tal fra DGU's course handicap table
+const samsoe = {...course, tees: [{name: "56", cr: 70.8, slope: 131}, {name: "49", cr: 68.0, slope: 120}]};
+for (const [hcp, ph] of [[-5.0, -7], [-4.6, -7], [-4.5, -6], [-0.3, -2], [-0.2, -1], [0.6, -1], [0.7, 0], [1.4, 0], [1.5, 1],
+    [11.9, 13], [12.6, 13], [12.7, 14], [16.1, 17], [16.2, 18], [23.8, 26], [23.9, 27], [30.0, 34], [30.7, 34], [30.8, 35],
+    [53.3, 61], [54.0, 61]]) {
+  assert.strictEqual(S.playingHandicap(hcp, samsoe, 100, "56"), ph, "hcp " + hcp);
+  assert.strictEqual(S.playingHandicap(hcp, samsoe, 100), ph, "hcp " + hcp + " (første tee)");
+}
+// Andet tee giver andet spillehandicap; ukendt tee falder tilbage til rundens første
+assert.strictEqual(S.playingHandicap(12.4, samsoe, 100, "49"), 9);  // 12.4*120/113 - 4 = 9.17
+assert.strictEqual(S.playingHandicap(12.4, samsoe, 100, "99"), 13);
+assert.strictEqual(S.scorecard({id: "x", name: "X", hcp: 12.4, tee: "49"}, samsoe, null, 100).playingHcp, 9);
+assert.strictEqual(S.scorecard({id: "x", name: "X", hcp: 12.4, tee: "49"}, samsoe, null, 100).tee, "49");
+// Gammelt format (cr/slope direkte på runden) virker stadig
+assert.strictEqual(S.playingHandicap(12.4, {par: course.par, si: course.si, cr: 70.8, slope: 131}, 100), 13);
 
 // Spillehandicap (WHS)
 assert.strictEqual(S.playingHandicap(12.4, course, 100), 12);
-assert.strictEqual(S.playingHandicap(12.4, {...course, slope: 130, cr: 73.1}, 100), 15); // 12.4*130/113+1.1 = 15.37
-assert.strictEqual(S.playingHandicap(20.0, {...course, slope: 130, cr: 73.1}, 95), 23);  // (23.0+1.1)*0.95 = 22.9
+assert.strictEqual(S.playingHandicap(12.4, withTee(73.1, 130), 100), 15); // 12.4*130/113+1.1 = 15.37
+assert.strictEqual(S.playingHandicap(20.0, withTee(73.1, 130), 95), 23);  // (23.0+1.1)*0.95 = 22.9
 assert.strictEqual(S.playingHandicap(-2.0, course, 100), -2);
 assert.strictEqual(S.roundHalfAway(2.5), 3);
 assert.strictEqual(S.roundHalfAway(-2.5), -3);

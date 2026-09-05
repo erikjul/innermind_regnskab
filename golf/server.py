@@ -30,7 +30,11 @@ PIN = os.environ.get("GOLF_PIN", "").strip()
 
 ANTAL_RUNDER = 3
 
-# Standardbane: par 72 med en almindelig fordeling af handicapnøgler. Rettes under Opsætning.
+# Standardbane: Samsø Golfklub, 18 hullers bane, tee 56 (herrer): par 72, CR 70,8, slope 131 (DGU's
+# course handicap table). Par og handicapnøgle pr. hul nedenfor er en generisk par 72-fordeling og
+# skal rettes efter klubbens scorekort under Opsætning.
+STANDARD_COURSE = "Samsø Golfklub"
+STANDARD_TEES = [{"name": "56", "cr": 70.8, "slope": 131}]
 STANDARD_PAR = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 5, 3, 4, 4]
 STANDARD_SI = [7, 3, 15, 11, 1, 13, 17, 9, 5, 8, 12, 18, 2, 14, 10, 16, 4, 6]
 RUNDER = [
@@ -50,10 +54,8 @@ def standard_state() -> dict[str, Any]:
                 {
                     "date": d,
                     "label": lab,
-                    "course": "",
-                    "tee": "",
-                    "cr": 72.0,
-                    "slope": 113,
+                    "course": STANDARD_COURSE,
+                    "tees": [dict(t) for t in STANDARD_TEES],
                     "par": list(STANDARD_PAR),
                     "si": list(STANDARD_SI),
                     "closed": False,
@@ -92,8 +94,12 @@ class Lager:
             while len(runder) < ANTAL_RUNDER:
                 runder.append(grund["settings"]["rounds"][len(runder)])
             for r, g in zip(runder, grund["settings"]["rounds"]):
+                if "tees" not in r:  # ældre format med ét tee pr. runde
+                    r["tees"] = [{"name": r.pop("tee", "") or "Standard", "cr": r.pop("cr", 72.0), "slope": r.pop("slope", 113)}]
                 for k, v in g.items():
                     r.setdefault(k, v)
+            for p in state["players"]:
+                p.setdefault("tee", "")
             return state
         return standard_state()
 
@@ -150,12 +156,14 @@ def tjek_hcp(hcp: float) -> float:
 class NySpiller(BaseModel):
     name: str
     hcp: float
+    tee: str = ""
 
 
 class RetSpiller(BaseModel):
     name: str | None = None
     hcp: float | None = None
     absent: list[bool] | None = None
+    tee: str | None = None
 
 
 class Slag(BaseModel):
@@ -163,13 +171,17 @@ class Slag(BaseModel):
     strokes: int | None = Field(default=None, ge=0, le=30)
 
 
+class Tee(BaseModel):
+    name: str = Field(min_length=1, max_length=30)
+    cr: float = Field(ge=40, le=90)
+    slope: int = Field(ge=55, le=155)
+
+
 class Runde(BaseModel):
     date: str
     label: str
     course: str = ""
-    tee: str = ""
-    cr: float = Field(ge=40, le=90)
-    slope: int = Field(ge=55, le=155)
+    tees: list[Tee] = Field(min_length=1, max_length=8)
     par: list[int]
     si: list[int]
     closed: bool = False
@@ -219,6 +231,7 @@ def opret_spiller(data: NySpiller) -> dict[str, Any]:
             "id": "p" + secrets.token_hex(4),
             "name": navn,
             "hcp": hcp,
+            "tee": data.tee.strip()[:30],
             "absent": [False] * ANTAL_RUNDER,
             "created": time.time(),
         }
@@ -242,6 +255,8 @@ def ret_spiller(pid: str, data: RetSpiller) -> dict[str, Any]:
             if len(data.absent) != ANTAL_RUNDER:
                 raise HTTPException(422, "absent skal have én værdi pr. runde")
             p["absent"] = [bool(x) for x in data.absent]
+        if data.tee is not None:
+            p["tee"] = data.tee.strip()[:30]
         lager.gem()
         return {"player": p, "version": lager.state["version"]}
 
@@ -285,6 +300,9 @@ def gem_opsaetning(data: Opsaetning, x_golf_pin: str | None = Header(default=Non
             raise HTTPException(422, "Par skal angives for 18 huller (3–6)")
         if sorted(rd.si) != list(range(1, 19)):
             raise HTTPException(422, "Handicapnøglerne skal være tallene 1–18, hver brugt én gang")
+        navne = [t.name.strip().casefold() for t in rd.tees]
+        if len(set(navne)) != len(navne):
+            raise HTTPException(422, "To tees på samme runde kan ikke have samme navn")
     with lager.lock:
         lager.state["settings"] = {
             "name": rens_navn(data.name),

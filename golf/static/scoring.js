@@ -10,7 +10,8 @@
 
   /** Afrunding hvor ,5 rundes væk fra nul (som i WHS), også for negative tal. */
   function roundHalfAway(x) {
-    return x < 0 ? -Math.round(-x) : Math.round(x);
+    const r = x < 0 ? -Math.round(-x) : Math.round(x);
+    return r === 0 ? 0 : r; // aldrig -0
   }
 
   /** Banehandicap efter WHS: HCP-index × slope/113 + (CR − par). */
@@ -18,10 +19,20 @@
     return hcpIndex * (slope / 113) + (cr - par);
   }
 
-  /** Spillehandicap = banehandicap × handicaptildeling (fx 100 eller 95 %), rundet til hele slag. */
-  function playingHandicap(hcpIndex, course, allowancePct) {
+  /** Det tee (navn, CR, slope) en spiller bruger på en runde. Findes spillerens tee ikke på runden,
+   * bruges rundens første tee. */
+  function teeFor(course, teeName) {
+    const tees = course.tees && course.tees.length ? course.tees : [{ name: "", cr: course.cr, slope: course.slope }];
+    const want = (teeName || "").trim().toLowerCase();
+    return tees.find((t) => t.name.trim().toLowerCase() === want) || tees[0];
+  }
+
+  /** Spillehandicap = banehandicap × handicaptildeling (fx 100 eller 95 %), rundet til hele slag.
+   * Svarer til DGU's course handicap table, når tildelingen er 100 %. */
+  function playingHandicap(hcpIndex, course, allowancePct, teeName) {
     const par = course.par.reduce((a, b) => a + b, 0);
-    const ch = courseHandicap(hcpIndex, course.slope, course.cr, par);
+    const tee = teeFor(course, teeName);
+    const ch = courseHandicap(hcpIndex, tee.slope, tee.cr, par);
     const pct = allowancePct == null ? 100 : allowancePct;
     return roundHalfAway((ch * pct) / 100);
   }
@@ -56,7 +67,8 @@
 
   /** Hul for hul-opgørelse for én spiller på én runde. */
   function scorecard(player, course, strokesList, allowancePct) {
-    const ph = playingHandicap(player.hcp, course, allowancePct);
+    const ph = playingHandicap(player.hcp, course, allowancePct, player.tee);
+    const tee = teeFor(course, player.tee);
     const holes = [];
     let total = 0, front = 0, back = 0, played = 0;
     for (let i = 0; i < 18; i++) {
@@ -70,7 +82,7 @@
         if (i < 9) front += pts; else back += pts;
       }
     }
-    return { playingHcp: ph, holes, total, front, back, played };
+    return { playingHcp: ph, tee: tee.name, holes, total, front, back, played };
   }
 
   /**
@@ -146,6 +158,7 @@
   return {
     roundHalfAway,
     courseHandicap,
+    teeFor,
     playingHandicap,
     strokesOnHole,
     stablefordPoints,
