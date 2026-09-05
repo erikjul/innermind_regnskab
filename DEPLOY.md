@@ -1,8 +1,9 @@
 # Sæt regnskabsprogrammet på en server
 
 Med denne opsætning kører programmet døgnet rundt på en lille server, og brugerne logger ind fra
-en browser på pc, tablet eller telefon. Alt kører i Docker: programmet, en natlig backup og Caddy,
-som sørger for HTTPS-certifikatet automatisk.
+en browser på pc, tablet eller telefon. Alt kører i Docker: programmet, en natlig backup og én fælles
+Caddy (mappen `proxy/`), som sørger for HTTPS-certifikater og fordeler trafikken, så flere apps
+(fx regnskab og golfturneringen i `golf/`) kan dele samme server.
 
 Det tager 30 til 45 minutter første gang. Du skal bruge:
 
@@ -45,7 +46,7 @@ ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable
 
 ```bash
 cd /opt
-git clone -b claude/danish-accounting-invoice-upload-pzigvf https://github.com/erikjul/innermind_regnskab.git
+git clone https://github.com/erikjul/innermind_regnskab.git
 cd innermind_regnskab
 cp .env.example .env
 nano .env
@@ -54,31 +55,48 @@ nano .env
 Udfyld i `.env`:
 
 * `ANTHROPIC_API_KEY` – din nøgle.
-* `REGNSKAB_DOMAENE` – se trin 4.
 * `REGNSKAB_SESSION_SECRET` – en lang tilfældig tekst. Lav den med `openssl rand -base64 48` og
   indsæt resultatet.
 
 Gem med Ctrl+O, Enter, og luk med Ctrl+X.
 
-## 4. Vælg adresse (domæne)
+## 4. Vælg adresser og start den fælles Caddy
 
-**Med eget domæne:** log ind hos din domæneudbyder (fx Simply, One.com, DanDomain) og opret en
-*A-record* for `regnskab` (eller det navn du vil have), der peger på serverens IPv4-adresse. Skriv så
-`REGNSKAB_DOMAENE=regnskab.innermind.dk` i `.env`. Det kan tage op til en time, før DNS virker.
-
-**Uden domæne:** brug sslip.io, som oversætter en IP-adresse til et navn, Caddy kan få certifikat
-til. Skriv IP-adressen med bindestreger: `REGNSKAB_DOMAENE=65-108-1-2.sslip.io`. Adressen bliver så
-`https://65-108-1-2.sslip.io`. Det virker med det samme og kan senere skiftes til et rigtigt domæne.
-
-## 5. Start
+Alle apps på serveren deler én Caddy, som bor i mappen `proxy/`. Den får en adresse pr. app:
 
 ```bash
+cd /opt/innermind_regnskab/proxy
+cp .env.example .env
+nano .env
+```
+
+**Med eget domæne:** log ind hos din domæneudbyder (fx Simply, One.com, DanDomain) og opret en
+*A-record* pr. app (fx `regnskab` og `golf`), der peger på serverens IPv4-adresse. Skriv så
+`REGNSKAB_DOMAENE=regnskab.innermind.dk` og `GOLF_DOMAENE=golf.innermind.dk`. Det kan tage op til
+en time, før DNS virker.
+
+**Uden domæne:** brug sslip.io, som oversætter en IP-adresse til et navn, Caddy kan få certifikat
+til. Skriv IP-adressen med bindestreger og et præfiks pr. app: `REGNSKAB_DOMAENE=regnskab.65-108-1-2.sslip.io`
+og `GOLF_DOMAENE=golf.65-108-1-2.sslip.io`. Det virker med det samme og kan senere skiftes til
+rigtige domæner. Begge linjer skal være udfyldt, også hvis du kun bruger den ene app.
+
+Opret det fælles netværk og start Caddy (kun første gang):
+
+```bash
+docker network create web
+docker compose up -d
+```
+
+## 5. Start regnskabsprogrammet
+
+```bash
+cd /opt/innermind_regnskab
 docker compose up -d --build
 docker compose logs -f app
 ```
 
 Når der står "Application startup complete", åbner du adressen i browseren
-(`https://regnskab.innermind.dk` eller `https://65-108-1-2.sslip.io`). Første gang ser du siden
+(`https://regnskab.innermind.dk` eller `https://regnskab.65-108-1-2.sslip.io`). Første gang ser du siden
 *Opret administrator*. Opret dig selv som administrator, og opret derefter din hustru under
 *Brugere* i topmenuen. Tryk Ctrl+C for at forlade loggen (programmet kører videre).
 
@@ -103,6 +121,9 @@ der; ellers kommer siden *Opret administrator* frem).
 ## 7. Drift
 
 * **Opdatere programmet:** `cd /opt/innermind_regnskab && ./deploy/opdater.sh`
+* **Flere apps:** hver app har sin egen `docker-compose.yml`, der kobler sig på netværket `web`
+  med et alias (fx `golf`). Tilføj en blok i `proxy/Caddyfile` og en adresse i `proxy/.env`, og
+  genstart Caddy med `cd proxy && docker compose up -d`. Golfturneringen er beskrevet i `golf/README.md`.
 * **Se log:** `docker compose logs --tail 100 app`
 * **Genstart:** `docker compose restart`
 * **Backup:** containeren `backup` laver en zip hver nat i volumen `regnskab_backup` og beholder de

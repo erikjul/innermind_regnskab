@@ -1,6 +1,5 @@
-# Golfturnering på egen server: app + Caddy (automatisk HTTPS).
-# Kopiér .env.example til .env og udfyld GOLF_DOMAENE (og evt. GOLF_PIN).
-# Start:  docker compose up -d --build
+# Golfturnering. HTTPS og adresse styres af den fælles Caddy i ../proxy (netværket "web").
+# Kopiér .env.example til .env, og start med:  docker compose up -d --build
 services:
   golf:
     build: .
@@ -8,24 +7,15 @@ services:
     env_file: .env
     volumes:
       - golf_data:/data
-    expose:
-      - "8010"
+    networks:
+      default:
+      web:
+        aliases:
+          - golf
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    env_file: .env
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - golf
+networks:
+  web:
+    external: true
 
 volumes:
   golf_data:
-  caddy_data:
-  caddy_config:

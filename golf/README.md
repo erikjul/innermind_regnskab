@@ -59,36 +59,37 @@ alt kun gemmes i den browser. Det er fint til at kigge, men ikke til selve turne
 
 ## Sæt den på en server (alle kan nå den fra telefonen)
 
-Fremgangsmåden er den samme som for regnskabsprogrammet i `DEPLOY.md`: en lille server hos fx
-Hetzner (den mindste er rigelig og kan slettes igen efter turneringen), Docker og et domæne eller
-serverens IP via sslip.io.
+Serveren deles med regnskabsprogrammet og andre apps: én fælles Caddy i `proxy/` sørger for HTTPS og
+sender trafikken videre efter adresse. Fremgangsmåden er den samme som i `DEPLOY.md`.
 
 1. Opret serveren og installér Docker som i `DEPLOY.md`, trin 1–2.
-2. Hent programmet og gå til golf-mappen:
+2. Hent programmet (spring over, hvis det allerede ligger på serveren):
 
    ```bash
    cd /opt
    git clone -b claude/golf-tournament-webapp-d1pvkv https://github.com/erikjul/innermind_regnskab.git
-   cd innermind_regnskab/golf
-   cp .env.example .env
-   nano .env
    ```
 
-   Sæt `GOLF_DOMAENE` (fx `golf.innermind.dk` med en A-record til serverens IP, eller
-   `65-108-1-2.sslip.io` med serverens IP skrevet med bindestreger) og eventuelt `GOLF_PIN`.
-3. Start:
+3. Sæt adresser og start den fælles Caddy (som i `DEPLOY.md`, trin 4). Uden domæne:
+   `GOLF_DOMAENE=golf.65-108-1-2.sslip.io` med serverens IP skrevet med bindestreger.
 
    ```bash
+   cd /opt/innermind_regnskab/proxy
+   cp .env.example .env && nano .env
+   docker network create web
+   docker compose up -d
+   ```
+
+4. Start golfappen:
+
+   ```bash
+   cd /opt/innermind_regnskab/golf
+   cp .env.example .env && nano .env      # sæt GOLF_PIN
    docker compose up -d --build
    ```
 
    Efter et halvt minut svarer `https://<GOLF_DOMAENE>`. Send adressen til spillerne – de kan lægge
    den på hjemmeskærmen på telefonen, så den opfører sig som en app.
-
-**Kører regnskabsprogrammet allerede på samme server?** Så er port 80/443 optaget af dets Caddy.
-Brug enten en separat server til golf (nemmest), eller tilføj golf-appen som en service i
-hovedmappens `docker-compose.yml` og en ekstra site-blok i `deploy/Caddyfile`, der peger på
-`golf:8010`.
 
 Opdatering: `git pull && docker compose up -d --build` i golf-mappen. Data ligger i Docker-volumen
 `golf_golf_data` og overlever opdateringer. En kopi af data hentes med

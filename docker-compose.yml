@@ -1,5 +1,6 @@
-# Produktion: regnskabsprogram + Caddy (automatisk HTTPS) + daglig backup.
-# Kopiér .env.example til .env og udfyld ANTHROPIC_API_KEY, REGNSKAB_DOMAENE og REGNSKAB_SESSION_SECRET.
+# Produktion: regnskabsprogram + daglig backup. HTTPS og adresse styres af den fælles Caddy i
+# proxy/ (netværket "web"), så flere apps kan dele serveren.
+# Kopiér .env.example til .env og udfyld ANTHROPIC_API_KEY og REGNSKAB_SESSION_SECRET.
 services:
   app:
     build: .
@@ -10,8 +11,11 @@ services:
     volumes:
       - regnskab_data:/data
       - regnskab_backup:/backup
-    expose:
-      - "8000"
+    networks:
+      default:
+      web:
+        aliases:
+          - regnskab
 
   backup:
     build: .
@@ -27,22 +31,10 @@ services:
                sleep $$(( (26*3600 - ($$(date +%s) % 86400)) % 86400 ));
              done'
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    env_file: .env
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
+networks:
+  web:
+    external: true
 
 volumes:
   regnskab_data:
   regnskab_backup:
-  caddy_data:
-  caddy_config:
