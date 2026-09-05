@@ -18,8 +18,11 @@ services:
       - regnskab_data:/data
       - regnskab_backup:/backup
     networks:
-      - default
-      - proxy
+      default:
+      proxy:
+        # Proxyen kan nå programmet både som "innermind-regnskab" og som "regnskab"
+        aliases:
+          - regnskab
 
   backup:
     build: ..

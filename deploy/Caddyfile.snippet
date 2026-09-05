@@ -1,7 +1,6 @@
 # Tilføj denne blok nederst i serverens eksisterende Caddyfile (fx /opt/server-proxy/Caddyfile) og genindlæs Caddy:
 #   cd /opt/server-proxy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-# Containernavnet "innermind-regnskab" kommer fra deploy/docker-compose.bag-proxy.yml, og begge containere
-# skal være på samme Docker-netværk (PROXY_NETWORK).
+# Programmet svarer på navnene "regnskab" og "innermind-regnskab" på det fælles Docker-netværk (PROXY_NETWORK).
 
 regnskab.innermind.dk {
     encode gzip
@@ -13,5 +12,5 @@ regnskab.innermind.dk {
         X-Content-Type-Options nosniff
         X-Frame-Options SAMEORIGIN
     }
-    reverse_proxy innermind-regnskab:8000
+    reverse_proxy regnskab:8000
 }
