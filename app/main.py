@@ -8,14 +8,14 @@ from pathlib import Path
 
 import anthropic
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from . import auth, backup, bookkeeping as bk, config, extraction, files, kontoplan, saft, vat
+from . import auth, avatar, backup, bookkeeping as bk, config, extraction, files, kontoplan, saft, vat
 from .db import Base, SessionLocal, engine, get_db, migrer
 from .models import Account, AuditLog, JournalEntry, JournalLine, PeriodLock, Settings, User, VatCode, VatSettlement, Voucher
 from .money import fra_oere, til_oere
@@ -719,3 +719,49 @@ async def indstillinger_gem(request: Request, db: Session = Depends(get_db)):
     bk.log(db, "indstillinger_gemt", "indstillinger", 1, {k: v for k, v in form.items()})
     db.commit()
     return redirect("/indstillinger", besked="Indstillinger gemt.")
+
+
+# --- Avatar (samtale på engelsk fra telefonen) -----------------------------------------------
+
+@app.get("/avatar", response_class=HTMLResponse)
+def avatar_side(request: Request, db: Session = Depends(get_db)):
+    return render(request, "avatar.html", db)
+
+
+@app.get("/avatar/viden", response_class=HTMLResponse)
+def avatar_viden(request: Request, db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    return render(request, "avatar_viden.html", db, tekst=avatar.laes_persona(), egen=avatar.persona_sti().exists(),
+                  sti=avatar.persona_sti(), model=avatar.avatar_model(), elevenlabs=bool(avatar.elevenlabs_noegle()),
+                  stemme=avatar.elevenlabs_stemme())
+
+
+@app.post("/avatar/viden")
+def avatar_viden_gem(request: Request, tekst: str = Form(""), handling: str = Form(""), db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    if handling == "nulstil":
+        avatar.persona_sti().unlink(missing_ok=True)
+        bk.log(db, "avatar_persona_nulstillet", "avatar"); db.commit()
+        return redirect("/avatar/viden", besked="Standarddokumentet bruges igen.")
+    if not tekst.strip():
+        return redirect("/avatar/viden", fejl="Dokumentet må ikke være tomt.")
+    avatar.gem_persona(tekst)
+    bk.log(db, "avatar_persona_gemt", "avatar", "", {"tegn": len(tekst)}); db.commit()
+    return redirect("/avatar/viden", besked="Gemt. Ændringerne gælder fra næste svar.")
+
+
+@app.post("/avatar/api/chat")
+async def avatar_chat(request: Request):
+    """Streamer avatarens svar som server-sent events (én sætning ad gangen, med lyd hvis ElevenLabs er sat op)."""
+    try:
+        krop = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Ugyldig JSON.")
+    historik = avatar.normaliser_historik(krop.get("messages") if isinstance(krop, dict) else None)
+    if not historik or historik[-1]["role"] != "user":
+        raise HTTPException(400, "Samtalen skal slutte med en besked fra brugeren.")
+    if not _api_noegle():
+        return StreamingResponse(iter([avatar._sse("error", {"message": "ANTHROPIC_API_KEY is not set on the server."})]),
+                                 media_type="text/event-stream")
+    return StreamingResponse(avatar.samtale_stroem(historik), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

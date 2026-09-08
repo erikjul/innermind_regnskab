@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titel %}Avatar – viden{% endblock %}
+{% block indhold %}
+<h1>Avatarens persona og viden <a class="knap" href="/avatar">Åbn avataren</a></h1>
+<div class="boks">
+  <p>Dette dokument er avatarens hukommelse. Den svarer på engelsk ud fra det, der står her, og siger fra, når noget
+  ikke står i dokumentet. Skriv i det sprog, du vil, men engelsk giver de mest præcise svar. Følg overskrifterne i
+  skabelonen nederst, og hold dig til offentlige oplysninger med kilde og dato.</p>
+  <p class="lille">Standarddokumentet beskriver en opdigtet spiller, så du kan afprøve avataren med det samme.
+  Dine ændringer gemmes i datamappen ({{ sti }}) og bruges fra næste samtale.</p>
+  <form method="post" class="formular">
+    <label>Persona og videndokument (Markdown)
+      <textarea name="tekst" rows="32" class="mono" style="font-size:.85rem">{{ tekst }}</textarea>
+    </label>
+    <div class="knapper">
+      <button class="primary">Gem</button>
+      {% if egen %}<button name="handling" value="nulstil" class="fare"
+        onclick="return confirm('Slet dit eget dokument og brug standardteksten igen?')">Tilbage til standard</button>{% endif %}
+    </div>
+  </form>
+</div>
+<div class="boks lille">
+  <h2>Opsætning</h2>
+  <table class="noegletal">
+    <tr><td>Sprogmodel</td><td class="mono">{{ model }}</td></tr>
+    <tr><td>Stemme</td><td>{% if elevenlabs %}ElevenLabs, stemme-id <span class="mono">{{ stemme }}</span>{% else %}
+      Browserens egen oplæsning (sæt <span class="mono">ELEVENLABS_API_KEY</span> for en bedre stemme){% endif %}</td></tr>
+    <tr><td>Talegenkendelse</td><td>Browserens (engelsk). Virker i Safari på iPhone og Chrome på Android.</td></tr>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+:root{--gr:#1f5e3a;--gr2:#2d7a4f;--fg:#1d1f24;--muted:#5c6670;--bg:#eef5f0;--boks:#fff;--roed:#c0392b}
+*{box-sizing:border-box}
+html,body{height:100%}
+body.avatar-side{margin:0;font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);
+  display:flex;flex-direction:column;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+.av-top{display:flex;align-items:center;gap:.8rem;padding:calc(.5rem + env(safe-area-inset-top)) 1rem .5rem;background:var(--gr);color:#fff}
+.av-top a{color:#fff;text-decoration:none}
+.av-tilbage{font-size:1.4rem;line-height:1}
+.av-titel{font-weight:700;font-size:1.1rem;flex:1}
+.av-links{display:flex;gap:1rem;align-items:center;font-size:.85rem}
+.av-toggle{display:flex;gap:.3rem;align-items:center;opacity:.9}
+.av-main{flex:1;display:flex;flex-direction:column;align-items:center;padding:.8rem 1rem 0;gap:.6rem;overflow:hidden}
+.av-scene{position:relative;width:min(78vw,300px,38dvh);aspect-ratio:300/340;flex:none}
+.av-figur{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.15))}
+.av-status{position:absolute;left:50%;bottom:-.2rem;transform:translateX(-50%);white-space:nowrap;font-size:.85rem;color:var(--muted);
+  background:rgba(255,255,255,.85);padding:.15rem .7rem;border-radius:1rem}
+.av-transskript{flex:1;width:100%;max-width:560px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.6rem 0 .3rem;-webkit-overflow-scrolling:touch}
+.av-boble{max-width:88%;padding:.5rem .8rem;border-radius:1rem;background:var(--boks);box-shadow:0 1px 2px rgba(0,0,0,.08);word-wrap:break-word}
+.av-boble.bruger{align-self:flex-end;background:var(--gr2);color:#fff;border-bottom-right-radius:.3rem}
+.av-boble.avatar{align-self:flex-start;border-bottom-left-radius:.3rem}
+.av-boble.midlertidig{opacity:.6;font-style:italic}
+.av-boble.fejl{align-self:center;background:#fde8e6;color:var(--roed);font-size:.9rem}
+.av-bund{display:flex;gap:.6rem;align-items:center;padding:.6rem 1rem calc(.6rem + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #dde3de}
+.av-tekst{flex:1;display:flex;gap:.4rem}
+.av-tekst input{flex:1;min-width:0;padding:.6rem .8rem;border:1px solid #cfd8d1;border-radius:1.2rem;font:inherit;font-size:16px}
+.av-tekst button{border:0;background:var(--gr2);color:#fff;border-radius:50%;width:2.6rem;height:2.6rem;font-size:1.1rem}
+.av-mic{flex:none;width:4.2rem;height:4.2rem;border-radius:50%;border:0;background:var(--gr);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(31,94,58,.4);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .1s}
+.av-mic:active{transform:scale(.94)}
+.av-scene[data-state=listening] ~ .av-bund .av-mic,.av-bund .av-mic.lytter{background:var(--roed);box-shadow:0 0 0 0 rgba(192,57,43,.6);animation:puls 1.2s infinite}
+@keyframes puls{0%{box-shadow:0 0 0 0 rgba(192,57,43,.55)}100%{box-shadow:0 0 0 18px rgba(192,57,43,0)}}
+.av-mic.taenker{background:#7a8a7f}
+
+/* Figurens tilstande */
+.av-hoved{transform-origin:150px 240px;transition:transform .2s}
+.av-scene[data-state=talking] .av-hoved{animation:nik 1.6s ease-in-out infinite}
+.av-scene[data-state=listening] .av-hoved{transform:rotate(-4deg) translateY(2px)}
+.av-scene[data-state=thinking] .av-iris{transform:translate(4px,-5px)}
+.av-iris{transition:transform .3s}
+@keyframes nik{0%,100%{transform:rotate(0) translateY(0)}30%{transform:rotate(1.5deg) translateY(-2px)}70%{transform:rotate(-1.5deg) translateY(1px)}}
+.av-bryn{transform-origin:150px 140px;transition:transform .15s}
+.av-scene[data-state=talking] .av-bryn,.av-scene[data-state=listening] .av-bryn{transform:translateY(-4px)}
+.av-laag{transform-origin:150px 146px;transform:scaleY(0);transition:transform .07s}
+.av-scene.blink .av-laag{transform:scaleY(1)}
+.av-mund [data-shape]{display:none}
+.av-scene[data-mouth=closed] [data-shape=closed],.av-scene[data-mouth=small] [data-shape=small],.av-scene[data-mouth=mid] [data-shape=mid],
+.av-scene[data-mouth=open] [data-shape=open],.av-scene[data-mouth=round] [data-shape=round]{display:inline}
+@media (min-width:700px){.av-scene{width:min(300px,42dvh)}}

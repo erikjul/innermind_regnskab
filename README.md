@@ -104,6 +104,29 @@ modpostering, som henviser til den oprindelige.
 Brug K0 på konto 3315 til udgifter til personbil (intet momsfradrag) og konto 3320 med kode INGEN
 til kørselsgodtgørelse efter statens takster.
 
+## Avatar – tal med en tegnet golfspiller fra telefonen
+
+Under *Avatar* i menuen ligger en side, der er lavet til telefonen: en tegnet engelsk golfspiller, du kan tale med.
+Tryk på mikrofonen, sig noget på engelsk, og hun svarer med stemme og bevæger munden i takt med talen. Med
+*hands-free* slået til lytter hun automatisk igen, når hun er færdig med at svare. Du kan også skrive i feltet.
+
+Sådan virker kæden:
+
+1. **Talegenkendelse** sker i telefonens browser (Safari på iPhone, Chrome på Android). Den kræver HTTPS, så brug
+   serveropsætningen eller Tailscale, ikke en ren IP-adresse.
+2. **Svaret** laves af Claude ud fra et *persona- og videndokument*, som administratoren redigerer under
+   *Avatar → Viden*. Standarddokumentet beskriver en opdigtet spiller, så du kan afprøve det med det samme. Erstat det
+   med den rigtige spillers offentlige biografi, resultater og citater (med kilde og dato). Avataren svarer kun ud fra
+   dokumentet og siger fra, når noget ikke står der. Dokumentet gemmes i datamappen (`data/avatar/persona.md`).
+3. **Stemmen** kommer fra ElevenLabs, hvis `ELEVENLABS_API_KEY` er sat (standardstemmen er "Lily", en britisk
+   kvindestemme; skift med `ELEVENLABS_VOICE_ID`). Uden nøgle bruges telefonens indbyggede engelske oplæsning, som
+   er gratis, men mindre naturlig. ElevenLabs leverer tidsstempler pr. bogstav, som styrer mundbevægelserne.
+4. **Figuren** er en SVG-tegning med fem mundstillinger, blink og små hovedbevægelser. Den ligner ingen rigtig person.
+
+Læg siden på hjemmeskærmen (Del → Føj til hjemmeskærm), så åbner den som en app. Samtalen kører kun, mens siden er
+åben på skærmen. Bemærk: klon aldrig en rigtig persons stemme eller ansigt uden samtykke; ElevenLabs og lignende
+tjenester kræver, at stemmens ejer selv verificerer.
+
 ## Opbygning
 
 ```
@@ -116,6 +139,7 @@ app/
   bookkeeping.py posteringer, storno, hash-kæde, periodelåse, momsafregning, rapporter
   vat.py         momsberegning og momsangivelse
   extraction.py  aflæsning af bilag med Claude (struktureret output)
+  avatar.py      samtale-avatar: Claude-svar sætning for sætning, ElevenLabs-stemme, persona fra avatar_persona.md
   files.py       opbevaring af originalbilag, billedbehandling af kamerafotos
   saft.py        SAF-T-eksport
   backup.py      sikkerhedskopi (kan køres fra cron: python -m app.backup)

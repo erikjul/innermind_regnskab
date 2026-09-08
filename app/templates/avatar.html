@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1f5e3a">
+<title>Avatar – {{ indstillinger.firmanavn or 'Regnskab' }}</title>
+<link rel="stylesheet" href="/static/avatar.css">
+</head>
+<body class="avatar-side">
+<header class="av-top">
+  <a href="/" class="av-tilbage" aria-label="Tilbage til regnskab">&#8592;</a>
+  <span class="av-titel">Avatar</span>
+  <span class="av-links">
+    <label class="av-toggle" title="Listen again automatically after each answer"><input type="checkbox" id="haandfri" checked> hands-free</label>
+    {% if er_admin %}<a href="/avatar/viden">Viden</a>{% endif %}
+  </span>
+</header>
+
+<main class="av-main">
+  <div class="av-scene" id="scene" data-mouth="closed" data-state="idle">
+    <svg viewBox="0 0 300 340" class="av-figur" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+          <stop offset="0" stop-color="#dff2e4"/><stop offset="1" stop-color="#9fd3b0"/>
+        </radialGradient>
+        <linearGradient id="hud" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffdcc2"/><stop offset="1" stop-color="#f3bf9c"/>
+        </linearGradient>
+        <linearGradient id="kasket" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#2d7a4f"/><stop offset="1" stop-color="#1b5233"/>
+        </linearGradient>
+        <clipPath id="oejeL"><ellipse cx="112" cy="168" rx="19" ry="21"/></clipPath>
+        <clipPath id="oejeR"><ellipse cx="184" cy="168" rx="19" ry="21"/></clipPath>
+      </defs>
+
+      <circle cx="150" cy="170" r="150" fill="url(#bg)"/>
+      <!-- lille golfbane i baggrunden -->
+      <ellipse cx="150" cy="315" rx="150" ry="40" fill="#5fae7a"/>
+      <circle cx="252" cy="300" r="5" fill="#fff"/><line x1="252" y1="300" x2="252" y2="268" stroke="#333" stroke-width="2"/>
+      <path d="M252 268 l18 6 -18 6z" fill="#e04a3a"/>
+
+      <g class="av-krop">
+        <!-- hestehale -->
+        <path class="av-hale" d="M215 175 c30 20 40 70 15 110 c-6 -30 -18 -55 -35 -75z" fill="#b07a3c"/>
+        <!-- hals og skuldre -->
+        <rect x="132" y="235" width="36" height="34" rx="12" fill="url(#hud)"/>
+        <path d="M60 340 c0 -55 40 -80 90 -80 s90 25 90 80z" fill="#f7f7f7"/>
+        <path d="M118 262 l32 30 32 -30 -8 -6 -24 22 -24 -22z" fill="#2d7a4f"/>
+        <path d="M60 340 c0 -55 40 -80 90 -80 v80z" fill="#eaeaea" opacity=".5"/>
+        <!-- golfkølle over skulderen -->
+        <line x1="236" y1="330" x2="288" y2="212" stroke="#555" stroke-width="5" stroke-linecap="round"/>
+        <path d="M282 208 c10 -6 18 2 14 12 c-3 8 -14 8 -20 3z" fill="#888"/>
+      </g>
+
+      <g class="av-hoved">
+        <!-- ører -->
+        <ellipse cx="72" cy="185" rx="13" ry="18" fill="url(#hud)"/>
+        <ellipse cx="228" cy="185" rx="13" ry="18" fill="url(#hud)"/>
+        <!-- hår bag ansigt -->
+        <path d="M70 165 c-6 -60 30 -100 80 -100 s86 40 80 100 c-20 -30 -40 -40 -80 -40 s-60 10 -80 40z" fill="#c68a44"/>
+        <!-- ansigt: stort karikaturhoved -->
+        <path d="M74 160 c0 -50 34 -85 76 -85 s76 35 76 85 c0 55 -30 95 -76 95 s-76 -40 -76 -95z" fill="url(#hud)"/>
+        <!-- fregner -->
+        <g fill="#d9926a" opacity=".8">
+          <circle cx="98" cy="203" r="1.8"/><circle cx="106" cy="209" r="1.6"/><circle cx="92" cy="211" r="1.4"/>
+          <circle cx="202" cy="203" r="1.8"/><circle cx="194" cy="209" r="1.6"/><circle cx="208" cy="211" r="1.4"/>
+        </g>
+        <!-- kasket (løftet, så øjenbrynene er fri) -->
+        <g transform="translate(0,-14)">
+        <path d="M66 150 c0 -55 40 -92 84 -92 s84 37 84 92 c-30 -28 -60 -36 -84 -36 s-54 8 -84 36z" fill="url(#kasket)"/>
+        <path d="M60 150 h180 c-20 -12 -58 -20 -90 -20 s-70 8 -90 20z" fill="#1b5233"/>
+        <path d="M60 150 c40 -8 140 -8 180 0 c-20 10 -40 14 -90 14 s-70 -4 -90 -14z" fill="#174529"/>
+        <circle cx="150" cy="110" r="9" fill="#fff"/><path d="M146 106 h8 M150 104 v10" stroke="#2d7a4f" stroke-width="2"/>
+        </g>
+        <!-- pandehår -->
+        <path d="M84 158 c10 -12 30 -16 46 -12 c-16 4 -30 12 -40 24z" fill="#c68a44"/>
+        <path d="M216 158 c-10 -12 -30 -16 -46 -12 c16 4 30 12 40 24z" fill="#c68a44"/>
+
+        <!-- øjenbryn -->
+        <g class="av-bryn" stroke="#8a5a2b" stroke-width="5" stroke-linecap="round" fill="none">
+          <path d="M92 140 c12 -10 28 -10 38 -3"/>
+          <path d="M208 140 c-12 -10 -28 -10 -38 -3"/>
+        </g>
+
+        <!-- øjne: store karikaturøjne -->
+        <g class="av-oejne">
+          <ellipse cx="112" cy="168" rx="19" ry="21" fill="#fff"/>
+          <ellipse cx="184" cy="168" rx="19" ry="21" fill="#fff"/>
+          <g class="av-iris">
+            <circle cx="115" cy="171" r="10" fill="#3b7d8c"/><circle cx="115" cy="171" r="5" fill="#111"/><circle cx="119" cy="166" r="3" fill="#fff"/>
+            <circle cx="187" cy="171" r="10" fill="#3b7d8c"/><circle cx="187" cy="171" r="5" fill="#111"/><circle cx="191" cy="166" r="3" fill="#fff"/>
+          </g>
+          <g class="av-laag" fill="url(#hud)">
+            <ellipse cx="112" cy="146" rx="20" ry="22" clip-path="url(#oejeL)"/>
+            <ellipse cx="184" cy="146" rx="20" ry="22" clip-path="url(#oejeR)"/>
+          </g>
+          <path d="M92 158 c8 -12 30 -14 42 -4" stroke="#8a5a2b" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M208 158 c-8 -12 -30 -14 -42 -4" stroke="#8a5a2b" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- næse -->
+        <path d="M146 182 c-6 10 -6 18 2 20 c6 0 8 -6 4 -12" stroke="#d09068" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <!-- kinder -->
+        <ellipse cx="98" cy="205" rx="14" ry="8" fill="#f4a29a" opacity=".45"/>
+        <ellipse cx="202" cy="205" rx="14" ry="8" fill="#f4a29a" opacity=".45"/>
+
+        <!-- mund: en form pr. viseme, vises via data-mouth -->
+        <g class="av-mund">
+          <path data-shape="closed" d="M120 222 c14 14 46 14 60 0" stroke="#b04a4a" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <g data-shape="small">
+            <ellipse cx="150" cy="226" rx="12" ry="6" fill="#7a2323"/>
+          </g>
+          <g data-shape="mid">
+            <path d="M124 220 c14 -6 38 -6 52 0 c-4 16 -48 16 -52 0z" fill="#7a2323"/>
+            <path d="M128 221 h44 c-2 4 -42 4 -44 0z" fill="#fff"/>
+          </g>
+          <g data-shape="open">
+            <path d="M120 218 c16 -8 44 -8 60 0 c-2 26 -58 26 -60 0z" fill="#7a2323"/>
+            <path d="M126 220 h48 c-2 5 -46 5 -48 0z" fill="#fff"/>
+            <ellipse cx="150" cy="236" rx="14" ry="6" fill="#d9605f"/>
+          </g>
+          <g data-shape="round">
+            <ellipse cx="150" cy="226" rx="11" ry="11" fill="#7a2323"/>
+            <ellipse cx="150" cy="226" rx="6" ry="6" fill="#4a1010"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+    <div class="av-status" id="status">Tap the microphone and say hello</div>
+  </div>
+
+  <div class="av-transskript" id="transskript" aria-live="polite"></div>
+</main>
+
+<footer class="av-bund">
+  <form id="tekstform" class="av-tekst" autocomplete="off">
+    <input type="text" id="tekst" placeholder="…or type here" enterkeyhint="send" maxlength="2000">
+    <button type="submit" aria-label="Send">&#10148;</button>
+  </form>
+  <button id="mic" class="av-mic" aria-label="Talk">
+    <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M12 15a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4zm6-4h-2a4 4 0 0 1-8 0H6a6 6 0 0 0 5 5.91V20H8v2h8v-2h-3v-3.09A6 6 0 0 0 18 11z"/></svg>
+  </button>
+</footer>
+<audio id="lyd" preload="auto" playsinline></audio>
+<script src="/static/avatar.js"></script>
+</body>
+</html>
