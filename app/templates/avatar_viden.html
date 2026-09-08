@@ -19,6 +19,44 @@
     </div>
   </form>
 </div>
+<div class="boks" id="portraet">
+  <h2>Portræt</h2>
+  <p>Upload et billede (foto, tegning eller karikatur, set forfra, med lukket mund), så bruges det i stedet for den
+  tegnede figur. Billedet animeres i browseren: underansigtet bevæger sig, når hun taler, og øjnene blinker.
+  Marker bagefter munden og øjnene herunder, så bevægelserne passer.</p>
+  <form method="post" action="/avatar/portraet" enctype="multipart/form-data" class="formular">
+    <label>Billedfil (JPG, PNG, WebP, HEIC)
+      <input type="file" name="fil" accept="image/*" required>
+    </label>
+    <div class="knapper"><button class="primary">Upload portræt</button>
+      {% if rig %}<button type="submit" formaction="/avatar/portraet/slet" formnovalidate class="fare"
+        onclick="return confirm('Fjern portrættet og brug den tegnede figur?')">Fjern portræt</button>{% endif %}</div>
+  </form>
+  {% if rig %}
+  <h3>Kalibrering</h3>
+  <p class="lille">Vælg, hvad du vil markere, og klik i billedet. Munden: klik midt på linjen mellem læberne, og træk
+  skyderen, til den røde streg dækker mundens bredde. Øjne: klik midt på hvert øje. Tryk <em>Prøv</em> for at se
+  bevægelsen, og <em>Gem kalibrering</em>, når det passer.</p>
+  <div class="rig-kalibrering" id="kalibrering" data-rig='{{ rig | tojson }}' data-portraet="/avatar/portraet.jpg?v={{ rig.version }}">
+    <div class="rig-valg">
+      <label><input type="radio" name="del" value="mund" checked> Mund</label>
+      <label><input type="radio" name="del" value="v"> Venstre øje</label>
+      <label><input type="radio" name="del" value="h"> Højre øje</label>
+      <label><input type="checkbox" id="blink" {% if rig.blink %}checked{% endif %}> Blink</label>
+    </div>
+    <div id="rigpreview"></div>
+    <div class="rig-valg">
+      <label>Mundens bredde <input type="range" id="mundb" min="{{ (rig.w * 0.04) | int }}" max="{{ (rig.w * 0.45) | int }}" value="{{ rig.mund.b }}"></label>
+      <label>Øjnenes bredde <input type="range" id="oejeb" min="{{ (rig.w * 0.03) | int }}" max="{{ (rig.w * 0.25) | int }}" value="{{ rig.oejne.v.b }}"></label>
+    </div>
+    <div class="knapper">
+      <button type="button" id="proev">Prøv</button>
+      <button type="button" id="gemrig" class="primary">Gem kalibrering</button>
+      <span id="rigstatus" class="lille"></span>
+    </div>
+  </div>
+  {% endif %}
+</div>
 <div class="boks lille">
   <h2>Opsætning</h2>
   <table class="noegletal">
@@ -28,4 +66,10 @@
     <tr><td>Talegenkendelse</td><td>Browserens (engelsk). Virker i Safari på iPhone og Chrome på Android.</td></tr>
   </table>
 </div>
+<style>
+.rig-kalibrering{max-width:520px}.rig-kalibrering svg{width:100%;height:auto;display:block;cursor:crosshair;border:1px solid var(--line);border-radius:8px;background:#eee}
+.rig-valg{display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;margin:.6rem 0}.rig-valg label{display:flex;gap:.4rem;align-items:center;margin:0}
+</style>
+<script src="/static/avatar_rig.js"></script>
+<script src="/static/avatar_kalibrering.js"></script>
 {% endblock %}

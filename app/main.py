@@ -8,7 +8,7 @@ from pathlib import Path
 
 import anthropic
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.templating import Jinja2Templates
@@ -725,7 +725,7 @@ async def indstillinger_gem(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/avatar", response_class=HTMLResponse)
 def avatar_side(request: Request, db: Session = Depends(get_db)):
-    return render(request, "avatar.html", db)
+    return render(request, "avatar.html", db, rig=avatar.laes_rig())
 
 
 @app.get("/avatar/viden", response_class=HTMLResponse)
@@ -733,7 +733,7 @@ def avatar_viden(request: Request, db: Session = Depends(get_db)):
     _kraev_admin(request)
     return render(request, "avatar_viden.html", db, tekst=avatar.laes_persona(), egen=avatar.persona_sti().exists(),
                   sti=avatar.persona_sti(), model=avatar.avatar_model(), elevenlabs=bool(avatar.elevenlabs_noegle()),
-                  stemme=avatar.elevenlabs_stemme())
+                  stemme=avatar.elevenlabs_stemme(), rig=avatar.laes_rig())
 
 
 @app.post("/avatar/viden")
@@ -765,3 +765,44 @@ async def avatar_chat(request: Request):
                                  media_type="text/event-stream")
     return StreamingResponse(avatar.samtale_stroem(historik), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.get("/avatar/portraet.jpg")
+def avatar_portraet():
+    sti = avatar.portraet_sti()
+    if not sti.exists():
+        raise HTTPException(404)
+    return FileResponse(sti, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
+
+
+@app.post("/avatar/portraet")
+async def avatar_portraet_upload(request: Request, fil: UploadFile = File(...), db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    indhold = await fil.read()
+    if not indhold or len(indhold) > config.MAX_UPLOAD_BYTES:
+        return redirect("/avatar/viden", fejl="Vælg en billedfil på højst 32 MB.")
+    try:
+        rig = avatar.gem_portraet(indhold)
+    except ValueError as e:
+        return redirect("/avatar/viden", fejl=str(e))
+    bk.log(db, "avatar_portraet_uploadet", "avatar", "", {"w": rig["w"], "h": rig["h"]}); db.commit()
+    return redirect("/avatar/viden", besked="Portrættet er gemt. Markér nu mund og øjne, og tryk Gem kalibrering.")
+
+
+@app.post("/avatar/portraet/kalibrering")
+async def avatar_portraet_kalibrering(request: Request, db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    try:
+        rig = avatar.gem_rig(await request.json())
+    except ValueError as e:
+        return JSONResponse({"fejl": str(e)}, status_code=400)
+    bk.log(db, "avatar_portraet_kalibreret", "avatar", "", rig["mund"]); db.commit()
+    return {"ok": True, "rig": rig}
+
+
+@app.post("/avatar/portraet/slet")
+def avatar_portraet_slet(request: Request, db: Session = Depends(get_db)):
+    _kraev_admin(request)
+    avatar.slet_portraet()
+    bk.log(db, "avatar_portraet_slettet", "avatar"); db.commit()
+    return redirect("/avatar/viden", besked="Portrættet er fjernet. Den tegnede figur bruges igen.")

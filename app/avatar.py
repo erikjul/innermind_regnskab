@@ -230,3 +230,92 @@ def samtale_stroem(historik: list[dict], *, client: anthropic.Anthropic | None =
     except RuntimeError as e:
         yield _sse("error", {"message": str(e)})
 
+
+
+# --- Portræt (uploadet billede, der animeres i browseren) --------------------------------------
+
+PORTRAET_MAKS_SIDE = 1400
+
+
+def portraet_sti() -> Path:
+    return config.DATA_DIR / "avatar" / "portraet.jpg"
+
+
+def rig_sti() -> Path:
+    return config.DATA_DIR / "avatar" / "portraet.json"
+
+
+def standard_rig(w: int, h: int) -> dict:
+    """Startværdier for mund og øjne (i billedets pixels); justeres bagefter under Avatar → Viden."""
+    return {"w": w, "h": h,
+            "mund": {"x": round(w * 0.5), "y": round(h * 0.62), "b": round(w * 0.16)},
+            "oejne": {"v": {"x": round(w * 0.42), "y": round(h * 0.42), "b": round(w * 0.09)},
+                      "h": {"x": round(w * 0.58), "y": round(h * 0.42), "b": round(w * 0.09)}},
+            "blink": True}
+
+
+def gem_portraet(indhold: bytes) -> dict:
+    """Normaliserer det uploadede billede (EXIF-rotation, HEIC -> JPEG, maks. 1400 px) og gemmer det
+    sammen med en standardrig. Returnerer riggen."""
+    import io
+
+    from PIL import Image, ImageOps
+
+    from . import files  # noqa: F401  – registrerer HEIC-læseren
+    try:
+        img = Image.open(io.BytesIO(indhold))
+        img = ImageOps.exif_transpose(img)
+    except Exception as e:  # noqa: BLE001
+        raise ValueError("Filen kunne ikke læses som et billede.") from e
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    img.thumbnail((PORTRAET_MAKS_SIDE, PORTRAET_MAKS_SIDE))
+    sti = portraet_sti()
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    img.save(sti, format="JPEG", quality=90, optimize=True)
+    rig = standard_rig(*img.size)
+    rig_sti().write_text(json.dumps(rig), encoding="utf-8")
+    return rig
+
+
+def laes_rig() -> dict | None:
+    if not portraet_sti().exists() or not rig_sti().exists():
+        return None
+    try:
+        rig = json.loads(rig_sti().read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+    rig["version"] = int(portraet_sti().stat().st_mtime)
+    return rig
+
+
+def _punkt(d, w: int, h: int, navn: str) -> dict:
+    if not isinstance(d, dict):
+        raise ValueError(f"{navn} mangler.")
+    try:
+        x, y, b = float(d.get("x")), float(d.get("y")), float(d.get("b"))
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"{navn}: x, y og b skal være tal.") from e
+    if not (0 <= x <= w and 0 <= y <= h and 0 < b <= w):
+        raise ValueError(f"{navn}: uden for billedet.")
+    return {"x": round(x), "y": round(y), "b": round(b)}
+
+
+def gem_rig(data) -> dict:
+    """Validerer og gemmer kalibreringen (mund og øjne) fra browseren."""
+    gammel = laes_rig()
+    if gammel is None:
+        raise ValueError("Upload et portræt først.")
+    w, h = gammel["w"], gammel["h"]
+    if not isinstance(data, dict):
+        raise ValueError("Ugyldige data.")
+    rig = {"w": w, "h": h, "mund": _punkt(data.get("mund"), w, h, "Munden"), "blink": bool(data.get("blink", True))}
+    oe = data.get("oejne") or {}
+    rig["oejne"] = {"v": _punkt(oe.get("v"), w, h, "Venstre øje"), "h": _punkt(oe.get("h"), w, h, "Højre øje")}
+    rig_sti().write_text(json.dumps(rig), encoding="utf-8")
+    return rig
+
+
+def slet_portraet() -> None:
+    portraet_sti().unlink(missing_ok=True)
+    rig_sti().unlink(missing_ok=True)

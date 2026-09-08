@@ -121,7 +121,11 @@ Sådan virker kæden:
 3. **Stemmen** kommer fra ElevenLabs, hvis `ELEVENLABS_API_KEY` er sat (standardstemmen er "Lily", en britisk
    kvindestemme; skift med `ELEVENLABS_VOICE_ID`). Uden nøgle bruges telefonens indbyggede engelske oplæsning, som
    er gratis, men mindre naturlig. ElevenLabs leverer tidsstempler pr. bogstav, som styrer mundbevægelserne.
-4. **Figuren** er en SVG-tegning med fem mundstillinger, blink og små hovedbevægelser. Den ligner ingen rigtig person.
+4. **Figuren** er som standard en SVG-tegning med fem mundstillinger, blink og små hovedbevægelser. Under
+   *Avatar → Viden → Portræt* kan du i stedet uploade et billede (foto, tegning eller karikatur set forfra med lukket
+   mund). Klik på munden og øjnene i billedet, justér bredden med skyderne, tryk *Prøv* og *Gem kalibrering*. Browseren
+   animerer så billedet: underansigtet skubbes ned i takt med talen, et mundhul med tænder tegnes i mellemrummet, og
+   øjnene blinker. Billedet gemmes i datamappen (`data/avatar/portraet.jpg` og `portraet.json`).
 
 Læg siden på hjemmeskærmen (Del → Føj til hjemmeskærm), så åbner den som en app. Samtalen kører kun, mens siden er
 åben på skærmen. Bemærk: klon aldrig en rigtig persons stemme eller ansigt uden samtykke; ElevenLabs og lignende

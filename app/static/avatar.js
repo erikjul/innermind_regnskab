@@ -27,7 +27,12 @@
     mic.classList.toggle('taenker', t === 'thinking');
     if (tekst !== undefined) status.textContent = tekst;
   };
-  const mund = f => { scene.dataset.mouth = f; };
+  // Uploadet portræt (rig) eller den tegnede figur
+  let rig = null;
+  if (scene.dataset.rig && window.AvatarRig) {
+    try { rig = window.AvatarRig(document.getElementById('rigbeholder'), JSON.parse(scene.dataset.rig), scene.dataset.portraet); } catch (e) { rig = null; }
+  }
+  const mund = f => { scene.dataset.mouth = f; if (rig) rig.mund(f); };
   const boble = (klasse, tekst) => {
     const el = document.createElement('div');
     el.className = 'av-boble ' + klasse; el.textContent = tekst;
@@ -37,6 +42,7 @@
 
   // Blink med jævne mellemrum
   const blink = () => {
+    if (rig) rig.blink();
     scene.classList.add('blink');
     setTimeout(() => scene.classList.remove('blink'), 140);
     setTimeout(blink, 2500 + Math.random() * 3500);

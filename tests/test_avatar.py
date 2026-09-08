@@ -128,3 +128,39 @@ def test_svar_stroem_buffer_og_afvisning():
     import pytest
     with pytest.raises(RuntimeError, match="declined"):
         list(avatar.svar_stroem(h, client=klient(["Sorry."], stop="refusal"), persona="p"))
+
+
+def _portraet(w=600, h=800) -> bytes:
+    import io
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (w, h), (200, 160, 140)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_portraet_rig(client):
+    assert client.get("/avatar/portraet.jpg").status_code == 404
+    assert avatar.laes_rig() is None
+    r = client.post("/avatar/portraet", files=[("fil", ("p.png", _portraet(1800, 2400), "image/png"))], follow_redirects=False)
+    assert "besked" in r.headers["location"]
+    rig = avatar.laes_rig()
+    assert (rig["w"], rig["h"]) == (1050, 1400)          # nedskaleret til maks. 1400 px
+    assert rig["mund"]["x"] == 525 and "version" in rig
+    assert client.get("/avatar/portraet.jpg").headers["content-type"] == "image/jpeg"
+    # avatar-siden og viden-siden bruger riggen
+    assert 'data-rig=' in client.get("/avatar").text and "rigbeholder" in client.get("/avatar").text
+    assert "Kalibrering" in client.get("/avatar/viden").text
+    # kalibrering gemmes og valideres
+    ny = {"mund": {"x": 500, "y": 900, "b": 180}, "oejne": {"v": {"x": 400, "y": 600, "b": 90}, "h": {"x": 600, "y": 600, "b": 90}}, "blink": False}
+    r = client.post("/avatar/portraet/kalibrering", json=ny)
+    assert r.status_code == 200 and r.json()["rig"]["mund"] == ny["mund"] and avatar.laes_rig()["blink"] is False
+    r = client.post("/avatar/portraet/kalibrering", json={"mund": {"x": 5000, "y": 1, "b": 10}, "oejne": ny["oejne"]})
+    assert r.status_code == 400 and "Munden" in r.json()["fejl"]
+    assert client.post("/avatar/portraet/kalibrering", json={"mund": ny["mund"]}).status_code == 400
+    # ugyldig fil
+    r = client.post("/avatar/portraet", files=[("fil", ("x.png", b"ikke et billede", "image/png"))], follow_redirects=False)
+    assert "fejl" in r.headers["location"]
+    # slet
+    r = client.post("/avatar/portraet/slet", follow_redirects=False)
+    assert "besked" in r.headers["location"] and avatar.laes_rig() is None
+    assert "rigbeholder" not in client.get("/avatar").text
